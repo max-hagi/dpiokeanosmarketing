@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, User, Mail, Phone, MapPin, DollarSign, Clock, Megaphone, AlertTriangle, Home, MessageSquare, Tag, Search, BarChart3 } from "lucide-react";
+import { ArrowLeft, ArrowRight, User, Mail, Phone, MapPin, DollarSign, Clock, Megaphone, AlertTriangle, Home, MessageSquare, Tag, Search, BarChart3, Target } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import LeadStatusBadge from "@/components/LeadStatusBadge";
@@ -285,8 +285,45 @@ export default function LeadDetail() {
         <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{lead.message}</p>
       </div>
 
-      {/* Send to Conversation Agent */}
-      <div className="flex justify-end">
+      {/* Qualification & Routing Status */}
+      {lead.qualification_score != null && (
+        <div className="glass-card rounded-xl p-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Target className="h-5 w-5 text-primary" />
+            <div>
+              <p className="text-sm font-medium">
+                Qualification Score: <span className="font-bold">{lead.qualification_score}/100</span>
+                {" — "}
+                <span className={
+                  lead.fit_level === "high_fit" ? "text-success" :
+                  lead.fit_level === "medium_fit" ? "text-warning" : "text-destructive"
+                }>
+                  {lead.fit_level === "high_fit" ? "High Fit" : lead.fit_level === "medium_fit" ? "Medium Fit" : "Low Fit"}
+                </span>
+              </p>
+              {lead.routing_action && (
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Routing: {lead.routing_action.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                </p>
+              )}
+            </div>
+          </div>
+          <Link to={`/leads/${lead.id}/qualify`}>
+            <Button variant="outline" size="sm" className="gap-2">
+              View Report <ArrowRight className="h-3 w-3" />
+            </Button>
+          </Link>
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex justify-between">
+        <Link to={`/leads/${lead.id}/qualify`}>
+          <Button variant={lead.qualification_score != null ? "outline" : "default"} className="gap-2">
+            <Target className="h-4 w-4" />
+            {lead.qualification_score != null ? "Qualification Report" : "Run Qualification →"}
+          </Button>
+        </Link>
         <Button
           onClick={() => sendToAgentMutation.mutate()}
           disabled={lead.sent_to_conversation_agent || sendToAgentMutation.isPending}
