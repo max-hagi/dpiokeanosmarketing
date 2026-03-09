@@ -1,4 +1,4 @@
-import { LayoutDashboard, PenSquare, History, Waves } from "lucide-react";
+import { LayoutDashboard, PenSquare, History, Waves, Users, UserPlus } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
