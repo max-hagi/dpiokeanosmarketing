@@ -78,6 +78,7 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
   }, [messages, isTyping]);
 
   const sendToAgent = useCallback(async (userMessage: string | null) => {
+    if (isStreaming) return; // Prevent duplicate calls
     setIsStreaming(true);
     setIsTyping(true);
 
@@ -179,7 +180,7 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
     } finally {
       setIsStreaming(false);
     }
-  }, [leadId]);
+  }, [leadId, isStreaming]);
 
   const extractProfile = async () => {
     setIsExtracting(true);

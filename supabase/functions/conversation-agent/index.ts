@@ -295,6 +295,7 @@ serve(async (req) => {
         model: "google/gemini-2.5-flash",
         messages: aiMessages,
         stream: true,
+        max_tokens: 1024,
       }),
     });
 
