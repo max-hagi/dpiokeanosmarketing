@@ -142,16 +142,29 @@ export type Database = {
       leads: {
         Row: {
           budget: Database["public"]["Enums"]["budget_range"] | null
+          campaign_id: string | null
           created_at: string
+          customer_segment:
+            | Database["public"]["Enums"]["customer_segment"]
+            | null
           email: string
+          engagement_score: number | null
           full_name: string
           id: string
           inquiry_summary: string | null
+          keyword_source: string | null
+          lead_stage: Database["public"]["Enums"]["lead_stage"]
           lead_status: Database["public"]["Enums"]["lead_status"]
           location: string | null
+          mailing_address: string | null
           message: string
           missing_fields: Json | null
           phone: string | null
+          preferred_contact:
+            | Database["public"]["Enums"]["preferred_contact"]
+            | null
+          referral_source: string | null
+          response_time_hours: number | null
           sent_to_conversation_agent: boolean
           source: Database["public"]["Enums"]["lead_source"] | null
           timeline: Database["public"]["Enums"]["lead_timeline"] | null
@@ -159,16 +172,29 @@ export type Database = {
         }
         Insert: {
           budget?: Database["public"]["Enums"]["budget_range"] | null
+          campaign_id?: string | null
           created_at?: string
+          customer_segment?:
+            | Database["public"]["Enums"]["customer_segment"]
+            | null
           email: string
+          engagement_score?: number | null
           full_name: string
           id?: string
           inquiry_summary?: string | null
+          keyword_source?: string | null
+          lead_stage?: Database["public"]["Enums"]["lead_stage"]
           lead_status?: Database["public"]["Enums"]["lead_status"]
           location?: string | null
+          mailing_address?: string | null
           message: string
           missing_fields?: Json | null
           phone?: string | null
+          preferred_contact?:
+            | Database["public"]["Enums"]["preferred_contact"]
+            | null
+          referral_source?: string | null
+          response_time_hours?: number | null
           sent_to_conversation_agent?: boolean
           source?: Database["public"]["Enums"]["lead_source"] | null
           timeline?: Database["public"]["Enums"]["lead_timeline"] | null
@@ -176,16 +202,29 @@ export type Database = {
         }
         Update: {
           budget?: Database["public"]["Enums"]["budget_range"] | null
+          campaign_id?: string | null
           created_at?: string
+          customer_segment?:
+            | Database["public"]["Enums"]["customer_segment"]
+            | null
           email?: string
+          engagement_score?: number | null
           full_name?: string
           id?: string
           inquiry_summary?: string | null
+          keyword_source?: string | null
+          lead_stage?: Database["public"]["Enums"]["lead_stage"]
           lead_status?: Database["public"]["Enums"]["lead_status"]
           location?: string | null
+          mailing_address?: string | null
           message?: string
           missing_fields?: Json | null
           phone?: string | null
+          preferred_contact?:
+            | Database["public"]["Enums"]["preferred_contact"]
+            | null
+          referral_source?: string | null
+          response_time_hours?: number | null
           sent_to_conversation_agent?: boolean
           source?: Database["public"]["Enums"]["lead_source"] | null
           timeline?: Database["public"]["Enums"]["lead_timeline"] | null
@@ -215,7 +254,15 @@ export type Database = {
         | "ad_copy"
         | "caption"
         | "image"
+      customer_segment: "new_lead" | "high_value" | "warm" | "dormant"
       lead_source: "google" | "social_media" | "word_of_mouth" | "other"
+      lead_stage:
+        | "inquiry"
+        | "qualified"
+        | "quoted"
+        | "sold"
+        | "installed"
+        | "retention"
       lead_status: "complete" | "incomplete"
       lead_timeline:
         | "asap"
@@ -230,6 +277,7 @@ export type Database = {
         | "facebook"
         | "website"
         | "other"
+      preferred_contact: "email" | "phone" | "sms" | "any"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -373,7 +421,16 @@ export const Constants = {
         "caption",
         "image",
       ],
+      customer_segment: ["new_lead", "high_value", "warm", "dormant"],
       lead_source: ["google", "social_media", "word_of_mouth", "other"],
+      lead_stage: [
+        "inquiry",
+        "qualified",
+        "quoted",
+        "sold",
+        "installed",
+        "retention",
+      ],
       lead_status: ["complete", "incomplete"],
       lead_timeline: [
         "asap",
@@ -390,6 +447,7 @@ export const Constants = {
         "website",
         "other",
       ],
+      preferred_contact: ["email", "phone", "sms", "any"],
     },
   },
 } as const
