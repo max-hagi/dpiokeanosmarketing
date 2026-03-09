@@ -8,6 +8,9 @@ import Dashboard from "./pages/Dashboard";
 import CreateContent from "./pages/CreateContent";
 import ReviewContent from "./pages/ReviewContent";
 import ContentHistory from "./pages/ContentHistory";
+import LeadCapture from "./pages/LeadCapture";
+import LeadList from "./pages/LeadList";
+import LeadDetail from "./pages/LeadDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
