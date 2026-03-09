@@ -1,4 +1,4 @@
-import { LayoutDashboard, PenSquare, History, Waves, Users, UserPlus, GitBranch } from "lucide-react";
+import { LayoutDashboard, PenSquare, History, Waves, Users, MessageCircle, GitBranch } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -11,7 +11,7 @@ const contentNavItems = [
 const leadNavItems = [
   { to: "/leads", icon: Users, label: "Leads" },
   { to: "/leads/pipeline", icon: GitBranch, label: "Pipeline" },
-  { to: "/leads/capture", icon: UserPlus, label: "Capture Lead" },
+  { to: "/leads/capture", icon: MessageCircle, label: "Start Conversation" },
 ];
 
 export default function AppSidebar() {

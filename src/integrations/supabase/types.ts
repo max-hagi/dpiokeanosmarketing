@@ -89,6 +89,41 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          lead_id: string
+          role: string
+          step_number: number | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          lead_id: string
+          role: string
+          step_number?: number | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          lead_id?: string
+          role?: string
+          step_number?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_content: {
         Row: {
           content_type: Database["public"]["Enums"]["content_type"]
@@ -143,6 +178,8 @@ export type Database = {
         Row: {
           budget: Database["public"]["Enums"]["budget_range"] | null
           campaign_id: string | null
+          conversation_data: Json | null
+          conversation_status: string | null
           created_at: string
           customer_segment:
             | Database["public"]["Enums"]["customer_segment"]
@@ -160,6 +197,7 @@ export type Database = {
           mailing_address: string | null
           message: string
           missing_fields: Json | null
+          persona_match: string | null
           phone: string | null
           preferred_contact:
             | Database["public"]["Enums"]["preferred_contact"]
@@ -180,6 +218,8 @@ export type Database = {
         Insert: {
           budget?: Database["public"]["Enums"]["budget_range"] | null
           campaign_id?: string | null
+          conversation_data?: Json | null
+          conversation_status?: string | null
           created_at?: string
           customer_segment?:
             | Database["public"]["Enums"]["customer_segment"]
@@ -197,6 +237,7 @@ export type Database = {
           mailing_address?: string | null
           message: string
           missing_fields?: Json | null
+          persona_match?: string | null
           phone?: string | null
           preferred_contact?:
             | Database["public"]["Enums"]["preferred_contact"]
@@ -217,6 +258,8 @@ export type Database = {
         Update: {
           budget?: Database["public"]["Enums"]["budget_range"] | null
           campaign_id?: string | null
+          conversation_data?: Json | null
+          conversation_status?: string | null
           created_at?: string
           customer_segment?:
             | Database["public"]["Enums"]["customer_segment"]
@@ -234,6 +277,7 @@ export type Database = {
           mailing_address?: string | null
           message?: string
           missing_fields?: Json | null
+          persona_match?: string | null
           phone?: string | null
           preferred_contact?:
             | Database["public"]["Enums"]["preferred_contact"]
