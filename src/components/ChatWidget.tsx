@@ -290,7 +290,7 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
             </div>
           )}
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Input */}
       {!isDone && (
