@@ -242,22 +242,22 @@ serve(async (req) => {
         lead_id: leadId, role: "user", content: message, step_number: stepNum,
       });
 
-      // --- REAL-TIME FIELD EXTRACTION from user message ---
-      // After each user message, infer structured lead fields from natural language
-      try {
-        const today = new Date().toISOString().split("T")[0];
-        const liveExtractResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: [
-              {
-                role: "system",
-                content: `You extract structured lead data from a customer's conversational message about pool installation. Today's date is ${today}.
+      // --- REAL-TIME FIELD EXTRACTION (runs in background, non-blocking) ---
+      const extractInBackground = async () => {
+        try {
+          const today = new Date().toISOString().split("T")[0];
+          const liveExtractResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${LOVABLE_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "google/gemini-2.5-flash",
+              messages: [
+                {
+                  role: "system",
+                  content: `You extract structured lead data from a customer's conversational message about pool installation. Today's date is ${today}.
 
 RULES:
 - Only extract fields that are clearly implied or stated in THIS specific message.
@@ -267,43 +267,41 @@ RULES:
 - For source: "friend told me" / "neighbour" → "word_of_mouth". "saw an ad" / "Instagram" / "Facebook" → "social_media". "Googled it" → "google".
 - For preferred_contact: "call me" / "phone" → "phone". "text" / "sms" → "sms". "email me" → "email".
 - Return ONLY fields you can confidently infer. Do NOT guess.`
-              },
-              {
-                role: "user",
-                content: `Customer message: "${message}"\n\nExisting lead data: location=${lead.location || "unknown"}, budget=${lead.budget || "unknown"}, timeline=${lead.timeline || "unknown"}, source=${lead.source || "unknown"}`
-              }
-            ],
-            tools: [{
-              type: "function",
-              function: {
-                name: "update_lead_fields",
-                description: "Update lead fields inferred from the customer's message",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    location: { type: "string", description: "City/area in Ontario if mentioned" },
-                    budget: { type: "string", enum: ["under_30k", "30k_50k", "50k_80k", "80k_plus"], description: "Budget range inferred from context" },
-                    timeline: { type: "string", enum: ["asap", "within_3_months", "3_6_months", "6_12_months", "12_plus_months"], description: "Timeline inferred relative to today" },
-                    source: { type: "string", enum: ["google", "social_media", "word_of_mouth", "other"], description: "How they heard about Okeanos" },
-                    preferred_contact: { type: "string", enum: ["email", "phone", "sms", "any"], description: "Preferred contact method" },
-                    phone: { type: "string", description: "Phone number if shared" },
-                  },
-                  additionalProperties: false,
                 },
-              },
-            }],
-            tool_choice: { type: "function", function: { name: "update_lead_fields" } },
-          }),
-        });
+                {
+                  role: "user",
+                  content: `Customer message: "${message}"\n\nExisting lead data: location=${lead.location || "unknown"}, budget=${lead.budget || "unknown"}, timeline=${lead.timeline || "unknown"}, source=${lead.source || "unknown"}`
+                }
+              ],
+              tools: [{
+                type: "function",
+                function: {
+                  name: "update_lead_fields",
+                  description: "Update lead fields inferred from the customer's message",
+                  parameters: {
+                    type: "object",
+                    properties: {
+                      location: { type: "string", description: "City/area in Ontario if mentioned" },
+                      budget: { type: "string", enum: ["under_30k", "30k_50k", "50k_80k", "80k_plus"], description: "Budget range inferred from context" },
+                      timeline: { type: "string", enum: ["asap", "within_3_months", "3_6_months", "6_12_months", "12_plus_months"], description: "Timeline inferred relative to today" },
+                      source: { type: "string", enum: ["google", "social_media", "word_of_mouth", "other"], description: "How they heard about Okeanos" },
+                      preferred_contact: { type: "string", enum: ["email", "phone", "sms", "any"], description: "Preferred contact method" },
+                      phone: { type: "string", description: "Phone number if shared" },
+                    },
+                    additionalProperties: false,
+                  },
+                },
+              }],
+              tool_choice: { type: "function", function: { name: "update_lead_fields" } },
+            }),
+          });
 
-        if (liveExtractResponse.ok) {
-          const extractResult = await liveExtractResponse.json();
-          const toolCall = extractResult.choices?.[0]?.message?.tool_calls?.[0];
-          if (toolCall?.function?.arguments) {
-            try {
+          if (liveExtractResponse.ok) {
+            const extractResult = await liveExtractResponse.json();
+            const toolCall = extractResult.choices?.[0]?.message?.tool_calls?.[0];
+            if (toolCall?.function?.arguments) {
               const fields = JSON.parse(toolCall.function.arguments);
               const leadUpdates: Record<string, any> = {};
-              // Only update fields that were inferred AND not already set on the lead
               if (fields.location && !lead.location) leadUpdates.location = fields.location;
               if (fields.budget && !lead.budget) leadUpdates.budget = fields.budget;
               if (fields.timeline && !lead.timeline) leadUpdates.timeline = fields.timeline;
@@ -312,28 +310,21 @@ RULES:
               if (fields.phone && !lead.phone) leadUpdates.phone = fields.phone;
 
               if (Object.keys(leadUpdates).length > 0) {
-                // Remove updated fields from missing_fields
                 const currentMissing = (lead.missing_fields as string[]) || [];
-                const fieldNameMap: Record<string, string> = {
-                  location: "location", budget: "budget", timeline: "timeline",
-                  source: "source", preferred_contact: "preferred_contact", phone: "phone",
-                };
-                const newMissing = currentMissing.filter(f => !leadUpdates[fieldNameMap[f] || f]);
+                const newMissing = currentMissing.filter(f => !leadUpdates[f]);
                 leadUpdates.missing_fields = newMissing;
                 if (newMissing.length === 0) leadUpdates.lead_status = "complete";
-
                 await supabase.from("leads").update(leadUpdates).eq("id", leadId);
                 console.log("Live extracted fields:", JSON.stringify(leadUpdates));
               }
-            } catch (e) {
-              console.error("Live extraction parse error:", e);
             }
           }
+        } catch (e) {
+          console.error("Live extraction error:", e);
         }
-      } catch (e) {
-        console.error("Live extraction error:", e);
-        // Non-fatal — continue with chat
-      }
+      };
+      // Fire and forget — don't block the chat response
+      extractInBackground();
     }
 
     // Re-fetch updated history
