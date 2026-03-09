@@ -1,11 +1,16 @@
-import { LayoutDashboard, PenSquare, History, Waves } from "lucide-react";
+import { LayoutDashboard, PenSquare, History, Waves, Users, UserPlus } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const contentNavItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/create", icon: PenSquare, label: "Create Content" },
   { to: "/history", icon: History, label: "History" },
+];
+
+const leadNavItems = [
+  { to: "/leads", icon: Users, label: "Leads" },
+  { to: "/leads/capture", icon: UserPlus, label: "Capture Lead" },
 ];
 
 export default function AppSidebar() {
@@ -24,8 +29,29 @@ export default function AppSidebar() {
       </div>
 
       <nav className="flex-1 space-y-1 px-3 py-4">
-        {navItems.map((item) => {
+        <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">Content Agent</p>
+        {contentNavItems.map((item) => {
           const isActive = location.pathname === item.to;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                isActive
+                  ? "bg-sidebar-accent text-sidebar-primary"
+                  : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+              )}
+            >
+              <item.icon className="h-4 w-4" />
+              {item.label}
+            </NavLink>
+          );
+        })}
+
+        <p className="px-3 mt-5 mb-1 text-[10px] font-semibold uppercase tracking-widest text-sidebar-foreground/40">Lead Capture Agent</p>
+        {leadNavItems.map((item) => {
+          const isActive = location.pathname === item.to || (item.to === "/leads" && location.pathname.startsWith("/leads/") && location.pathname !== "/leads/capture");
           return (
             <NavLink
               key={item.to}

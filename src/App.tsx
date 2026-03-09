@@ -8,6 +8,9 @@ import Dashboard from "./pages/Dashboard";
 import CreateContent from "./pages/CreateContent";
 import ReviewContent from "./pages/ReviewContent";
 import ContentHistory from "./pages/ContentHistory";
+import LeadCapture from "./pages/LeadCapture";
+import LeadList from "./pages/LeadList";
+import LeadDetail from "./pages/LeadDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +27,9 @@ const App = () => (
             <Route path="/create" element={<CreateContent />} />
             <Route path="/review/:id" element={<ReviewContent />} />
             <Route path="/history" element={<ContentHistory />} />
+            <Route path="/leads" element={<LeadList />} />
+            <Route path="/leads/capture" element={<LeadCapture />} />
+            <Route path="/leads/:id" element={<LeadDetail />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

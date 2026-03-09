@@ -139,6 +139,60 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          budget: Database["public"]["Enums"]["budget_range"] | null
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+          inquiry_summary: string | null
+          lead_status: Database["public"]["Enums"]["lead_status"]
+          location: string | null
+          message: string
+          missing_fields: Json | null
+          phone: string | null
+          sent_to_conversation_agent: boolean
+          source: Database["public"]["Enums"]["lead_source"] | null
+          timeline: Database["public"]["Enums"]["lead_timeline"] | null
+          updated_at: string
+        }
+        Insert: {
+          budget?: Database["public"]["Enums"]["budget_range"] | null
+          created_at?: string
+          email: string
+          full_name: string
+          id?: string
+          inquiry_summary?: string | null
+          lead_status?: Database["public"]["Enums"]["lead_status"]
+          location?: string | null
+          message: string
+          missing_fields?: Json | null
+          phone?: string | null
+          sent_to_conversation_agent?: boolean
+          source?: Database["public"]["Enums"]["lead_source"] | null
+          timeline?: Database["public"]["Enums"]["lead_timeline"] | null
+          updated_at?: string
+        }
+        Update: {
+          budget?: Database["public"]["Enums"]["budget_range"] | null
+          created_at?: string
+          email?: string
+          full_name?: string
+          id?: string
+          inquiry_summary?: string | null
+          lead_status?: Database["public"]["Enums"]["lead_status"]
+          location?: string | null
+          message?: string
+          missing_fields?: Json | null
+          phone?: string | null
+          sent_to_conversation_agent?: boolean
+          source?: Database["public"]["Enums"]["lead_source"] | null
+          timeline?: Database["public"]["Enums"]["lead_timeline"] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -147,6 +201,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      budget_range: "under_30k" | "30k_50k" | "50k_80k" | "80k_plus"
       content_status:
         | "draft"
         | "generating"
@@ -160,6 +215,14 @@ export type Database = {
         | "ad_copy"
         | "caption"
         | "image"
+      lead_source: "google" | "social_media" | "word_of_mouth" | "other"
+      lead_status: "complete" | "incomplete"
+      lead_timeline:
+        | "asap"
+        | "within_3_months"
+        | "3_6_months"
+        | "6_12_months"
+        | "12_plus_months"
       platform_type:
         | "linkedin"
         | "instagram"
@@ -294,6 +357,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      budget_range: ["under_30k", "30k_50k", "50k_80k", "80k_plus"],
       content_status: [
         "draft",
         "generating",
@@ -308,6 +372,15 @@ export const Constants = {
         "ad_copy",
         "caption",
         "image",
+      ],
+      lead_source: ["google", "social_media", "word_of_mouth", "other"],
+      lead_status: ["complete", "incomplete"],
+      lead_timeline: [
+        "asap",
+        "within_3_months",
+        "3_6_months",
+        "6_12_months",
+        "12_plus_months",
       ],
       platform_type: [
         "linkedin",
