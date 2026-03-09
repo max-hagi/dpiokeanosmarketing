@@ -180,7 +180,7 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
     } finally {
       setIsStreaming(false);
     }
-  }, [leadId]);
+  }, [leadId, isStreaming]);
 
   const extractProfile = async () => {
     setIsExtracting(true);
