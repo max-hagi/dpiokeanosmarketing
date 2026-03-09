@@ -149,6 +149,7 @@ export type Database = {
             | null
           email: string
           engagement_score: number | null
+          fit_level: Database["public"]["Enums"]["fit_level"] | null
           full_name: string
           id: string
           inquiry_summary: string | null
@@ -163,8 +164,14 @@ export type Database = {
           preferred_contact:
             | Database["public"]["Enums"]["preferred_contact"]
             | null
+          qualification_data: Json | null
+          qualification_score: number | null
+          qualified_at: string | null
           referral_source: string | null
           response_time_hours: number | null
+          routed_at: string | null
+          routing_action: string | null
+          routing_reason: string | null
           sent_to_conversation_agent: boolean
           source: Database["public"]["Enums"]["lead_source"] | null
           timeline: Database["public"]["Enums"]["lead_timeline"] | null
@@ -179,6 +186,7 @@ export type Database = {
             | null
           email: string
           engagement_score?: number | null
+          fit_level?: Database["public"]["Enums"]["fit_level"] | null
           full_name: string
           id?: string
           inquiry_summary?: string | null
@@ -193,8 +201,14 @@ export type Database = {
           preferred_contact?:
             | Database["public"]["Enums"]["preferred_contact"]
             | null
+          qualification_data?: Json | null
+          qualification_score?: number | null
+          qualified_at?: string | null
           referral_source?: string | null
           response_time_hours?: number | null
+          routed_at?: string | null
+          routing_action?: string | null
+          routing_reason?: string | null
           sent_to_conversation_agent?: boolean
           source?: Database["public"]["Enums"]["lead_source"] | null
           timeline?: Database["public"]["Enums"]["lead_timeline"] | null
@@ -209,6 +223,7 @@ export type Database = {
             | null
           email?: string
           engagement_score?: number | null
+          fit_level?: Database["public"]["Enums"]["fit_level"] | null
           full_name?: string
           id?: string
           inquiry_summary?: string | null
@@ -223,8 +238,14 @@ export type Database = {
           preferred_contact?:
             | Database["public"]["Enums"]["preferred_contact"]
             | null
+          qualification_data?: Json | null
+          qualification_score?: number | null
+          qualified_at?: string | null
           referral_source?: string | null
           response_time_hours?: number | null
+          routed_at?: string | null
+          routing_action?: string | null
+          routing_reason?: string | null
           sent_to_conversation_agent?: boolean
           source?: Database["public"]["Enums"]["lead_source"] | null
           timeline?: Database["public"]["Enums"]["lead_timeline"] | null
@@ -255,6 +276,7 @@ export type Database = {
         | "caption"
         | "image"
       customer_segment: "new_lead" | "high_value" | "warm" | "dormant"
+      fit_level: "high_fit" | "medium_fit" | "low_fit"
       lead_source: "google" | "social_media" | "word_of_mouth" | "other"
       lead_stage:
         | "inquiry"
@@ -422,6 +444,7 @@ export const Constants = {
         "image",
       ],
       customer_segment: ["new_lead", "high_value", "warm", "dormant"],
+      fit_level: ["high_fit", "medium_fit", "low_fit"],
       lead_source: ["google", "social_media", "word_of_mouth", "other"],
       lead_stage: [
         "inquiry",
