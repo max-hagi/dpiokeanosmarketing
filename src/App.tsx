@@ -12,6 +12,7 @@ import LeadCapture from "./pages/LeadCapture";
 import LeadList from "./pages/LeadList";
 import LeadDetail from "./pages/LeadDetail";
 import LeadPipeline from "./pages/LeadPipeline";
+import LeadQualification from "./pages/LeadQualification";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
