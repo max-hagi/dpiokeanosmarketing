@@ -3,11 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, User, Mail, Phone, MapPin, DollarSign, Clock, Megaphone, AlertTriangle, Home, MessageSquare, Tag, Search, BarChart3, Target } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, MapPin, DollarSign, Clock, Megaphone, AlertTriangle, Home, MessageSquare, Tag, Search, BarChart3, Target, Loader2, RotateCw } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { useEffect } from "react";
 import LeadStatusBadge from "@/components/LeadStatusBadge";
 import LeadStageBadge from "@/components/LeadStageBadge";
+import QualificationReport from "@/components/QualificationReport";
 
 const budgetLabels: Record<string, string> = {
   under_30k: "Under $30,000",
@@ -72,6 +74,31 @@ export default function LeadDetail() {
     enabled: !!id,
   });
 
+  const qualifyMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("qualify-lead", {
+        body: { leadId: id },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lead", id] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+    },
+    onError: (e) => {
+      toast.error(e instanceof Error ? e.message : "Qualification failed");
+    },
+  });
+
+  // Auto-qualify on first view if not yet qualified
+  useEffect(() => {
+    if (lead && !lead.qualification_data && !qualifyMutation.isPending && !qualifyMutation.isSuccess) {
+      qualifyMutation.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lead?.id, lead?.qualification_data]);
+
   const updateStageMutation = useMutation({
     mutationFn: async (newStage: string) => {
       const { error } = await supabase
@@ -98,21 +125,6 @@ export default function LeadDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["lead", id] });
       toast.success("Customer segment updated!");
-    },
-  });
-
-  const sendToAgentMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from("leads")
-        .update({ sent_to_conversation_agent: true })
-        .eq("id", id!);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["lead", id] });
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      toast.success("Lead sent to Conversation Agent!");
     },
   });
 
@@ -166,11 +178,22 @@ export default function LeadDetail() {
             {lead.engagement_score ?? 0}/100
           </div>
         </div>
+        {lead.qualification_data && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2 ml-auto"
+            onClick={() => qualifyMutation.mutate()}
+            disabled={qualifyMutation.isPending}
+          >
+            <RotateCw className={`h-3.5 w-3.5 ${qualifyMutation.isPending ? "animate-spin" : ""}`} />
+            Re-score
+          </Button>
+        )}
       </div>
 
       {/* Structured Lead Profile */}
       <div className="glass-card rounded-xl p-6 space-y-6">
-        {/* CONTACT INFO */}
         <section>
           <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Contact Info</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -193,7 +216,6 @@ export default function LeadDetail() {
 
         <hr className="border-border" />
 
-        {/* LOCATION & ADDRESS */}
         <section>
           <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Location</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -210,7 +232,6 @@ export default function LeadDetail() {
 
         <hr className="border-border" />
 
-        {/* PROJECT DETAILS */}
         <section>
           <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Project Details</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -227,7 +248,6 @@ export default function LeadDetail() {
 
         <hr className="border-border" />
 
-        {/* INQUIRY SUMMARY */}
         <section>
           <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Inquiry Summary</h2>
           <p className="text-sm leading-relaxed">{lead.inquiry_summary || lead.message}</p>
@@ -235,7 +255,6 @@ export default function LeadDetail() {
 
         <hr className="border-border" />
 
-        {/* SOURCE & ATTRIBUTION */}
         <section>
           <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Source & Attribution</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -253,7 +272,6 @@ export default function LeadDetail() {
           </div>
         </section>
 
-        {/* MISSING INFO FLAGS */}
         {missingFields.length > 0 && (
           <>
             <hr className="border-border" />
@@ -272,66 +290,27 @@ export default function LeadDetail() {
 
         <hr className="border-border" />
 
-        {/* META */}
         <section className="flex items-center justify-between text-xs text-muted-foreground">
           <span>Lead ID: {lead.id}</span>
           <span>Submitted: {format(new Date(lead.created_at), "MMM d, yyyy 'at' h:mm a")}</span>
         </section>
       </div>
 
-      {/* Raw Message */}
+      {/* Original Message */}
       <div className="glass-card rounded-xl p-6">
         <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Original Message</h2>
         <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{lead.message}</p>
       </div>
 
-      {/* Qualification & Routing Status */}
-      {lead.qualification_score != null && (
-        <div className="glass-card rounded-xl p-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Target className="h-5 w-5 text-primary" />
-            <div>
-              <p className="text-sm font-medium">
-                Qualification Score: <span className="font-bold">{lead.qualification_score}/100</span>
-                {" — "}
-                <span className={
-                  lead.fit_level === "high_fit" ? "text-success" :
-                  lead.fit_level === "medium_fit" ? "text-warning" : "text-destructive"
-                }>
-                  {lead.fit_level === "high_fit" ? "High Fit" : lead.fit_level === "medium_fit" ? "Medium Fit" : "Low Fit"}
-                </span>
-              </p>
-              {lead.routing_action && (
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Routing: {lead.routing_action.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
-                </p>
-              )}
-            </div>
-          </div>
-          <Link to={`/leads/${lead.id}/qualify`}>
-            <Button variant="outline" size="sm" className="gap-2">
-              View Report <ArrowRight className="h-3 w-3" />
-            </Button>
-          </Link>
+      {/* Qualification Report — auto-loaded inline */}
+      {qualifyMutation.isPending && !lead.qualification_data && (
+        <div className="glass-card rounded-xl p-8 text-center space-y-3">
+          <Loader2 className="h-8 w-8 text-primary mx-auto animate-spin" />
+          <p className="text-sm text-muted-foreground">Scoring this lead automatically...</p>
         </div>
       )}
 
-      {/* Action Buttons */}
-      <div className="flex justify-between">
-        <Link to={`/leads/${lead.id}/qualify`}>
-          <Button variant={lead.qualification_score != null ? "outline" : "default"} className="gap-2">
-            <Target className="h-4 w-4" />
-            {lead.qualification_score != null ? "Qualification Report" : "Run Qualification →"}
-          </Button>
-        </Link>
-        <Button
-          onClick={() => sendToAgentMutation.mutate()}
-          disabled={lead.sent_to_conversation_agent || sendToAgentMutation.isPending}
-          className="gap-2" size="lg"
-        >
-          {lead.sent_to_conversation_agent ? "Sent to Conversation Agent ✓" : (<>Send to Conversation Agent <ArrowRight className="h-4 w-4" /></>)}
-        </Button>
-      </div>
+      <QualificationReport lead={lead} />
     </div>
   );
 }
