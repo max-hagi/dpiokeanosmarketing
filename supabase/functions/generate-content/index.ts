@@ -33,6 +33,15 @@ We focus on bringing back trust, professionalism, and affordability to the pool 
 VALUE PROPOSITION:
 We provide the lowest initial cost and lifetime cost of constructing and operating a pool in the industry. By focusing on volume, speed, and simplicity, we cut an average of 20K+ off the price of a pool. With fair financing plans, streamlined operations, and the best sourcing in the industry leveraging 25+ years of connections, we offer the leanest pool on the market with the fastest installation, industry-leading warranties, and lowest future operating costs.
 
+CUSTOMER JOURNEY INSIGHTS (use these to shape messaging):
+- Customers often feel overwhelmed by "too many steps" to get a pool — position Okeanos as the simple, streamlined option
+- Low transparency and high prices are top pain points — always lead with price transparency and honest communication
+- Customers are comparison shopping — address this by highlighting the $20K+ savings and 2-day install speed
+- Common concerns: winter durability in Ontario, permit process complexity, hidden costs
+- Customers in Awareness phase respond to: social proof (5-star Google reviews), standard pricing on website, knowledgeable leadership
+- Customers in Consideration phase need: easy-to-follow information, gallery/offerings, model comparisons
+- The persona is typically a family (like "Fiona and Jim") looking to increase property value while creating a space to entertain
+
 BRAND TONE: Professional yet approachable, family-oriented, trustworthy, confident without being flashy. Speak to hardworking families who deserve to enjoy their backyard.
 
 CONTENT RULES:
@@ -42,7 +51,10 @@ CONTENT RULES:
 - Reference the rising costs of vacations and how a pool is a smart investment
 - Never be pushy or salesy — be educational and trustworthy
 - Include calls to action that feel natural and inviting
-- Use Canadian English spelling where applicable`;
+- Address price transparency proactively — "no hidden fees", "what you see is what you pay"
+- Mention the permit process simplicity when relevant — "we handle the permits for you"
+- Use Canadian English spelling where applicable
+- Reference Ontario-specific climate benefits of fiberglass (freeze-thaw resistance, no liner replacements)`;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -59,20 +71,14 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Log the generation start
     await supabase.from("audit_log").insert({
       request_id: requestId,
       action: "generation_started",
       details: { prompt, contentType, targetAudience, generateImage },
     });
 
-    // Update request status
-    await supabase
-      .from("content_requests")
-      .update({ status: "generating" })
-      .eq("id", requestId);
+    await supabase.from("content_requests").update({ status: "generating" }).eq("id", requestId);
 
-    // Build the user prompt
     let userPrompt = `Create ${contentType.replace("_", " ")} content based on this brief:\n\n"${prompt}"`;
     if (targetAudience) userPrompt += `\n\nTarget audience: ${targetAudience}`;
     if (additionalContext) userPrompt += `\n\nAdditional context: ${additionalContext}`;
@@ -82,10 +88,9 @@ serve(async (req) => {
     } else if (contentType === "blog_article") {
       userPrompt += "\n\nWrite a full blog article with a compelling headline, introduction, body sections with subheadings, and a conclusion with CTA. Use markdown formatting.";
     } else if (contentType === "ad_copy") {
-      userPrompt += "\n\nWrite compelling ad copy with a strong headline, body text, and clear call to action. Keep it punchy and conversion-focused.";
+      userPrompt += "\n\nWrite compelling ad copy with a strong headline, body text, and clear call to action. Keep it punchy and conversion-focused. Address the customer pain point of 'too many steps and hidden costs' by positioning Okeanos as the transparent, simple choice.";
     }
 
-    // Generate text content
     const textResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -121,7 +126,6 @@ serve(async (req) => {
 
     let imageUrl: string | null = null;
 
-    // Generate image if requested
     if (generateImage) {
       const imagePrompt = `Professional marketing photo for a fiberglass pool installation company called Okeanos Ontario. ${prompt}. Style: clean, modern, aspirational, family-friendly. Show beautiful backyard with pool, happy family atmosphere, Canadian suburban setting. High quality, photorealistic.`;
 
@@ -143,7 +147,6 @@ serve(async (req) => {
         const base64Image = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
         if (base64Image) {
-          // Upload to storage
           const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
           const binaryData = Uint8Array.from(atob(base64Data), (c) => c.charCodeAt(0));
           const fileName = `${requestId}/${Date.now()}.png`;
@@ -160,7 +163,6 @@ serve(async (req) => {
       }
     }
 
-    // Get current max version
     const { data: existingContent } = await supabase
       .from("generated_content")
       .select("version")
@@ -170,7 +172,6 @@ serve(async (req) => {
 
     const nextVersion = existingContent && existingContent.length > 0 ? existingContent[0].version + 1 : 1;
 
-    // Save generated content
     const { data: content, error: contentError } = await supabase
       .from("generated_content")
       .insert({
@@ -185,13 +186,8 @@ serve(async (req) => {
 
     if (contentError) throw contentError;
 
-    // Update request status to review
-    await supabase
-      .from("content_requests")
-      .update({ status: "review" })
-      .eq("id", requestId);
+    await supabase.from("content_requests").update({ status: "review" }).eq("id", requestId);
 
-    // Log completion
     await supabase.from("audit_log").insert({
       request_id: requestId,
       content_id: content.id,

@@ -2,10 +2,12 @@ import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ArrowRight, User, Mail, Phone, MapPin, DollarSign, Clock, Megaphone, AlertTriangle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, ArrowRight, User, Mail, Phone, MapPin, DollarSign, Clock, Megaphone, AlertTriangle, Home, MessageSquare, Tag, Search, BarChart3 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import LeadStatusBadge from "@/components/LeadStatusBadge";
+import LeadStageBadge from "@/components/LeadStageBadge";
 
 const budgetLabels: Record<string, string> = {
   under_30k: "Under $30,000",
@@ -29,6 +31,29 @@ const sourceLabels: Record<string, string> = {
   other: "Other",
 };
 
+const contactLabels: Record<string, string> = {
+  email: "Email",
+  phone: "Phone",
+  sms: "SMS",
+  any: "Any",
+};
+
+const segmentLabels: Record<string, string> = {
+  new_lead: "New Lead",
+  high_value: "High Value",
+  warm: "Warm",
+  dormant: "Dormant",
+};
+
+const leadStages = [
+  { value: "inquiry", label: "Inquiry" },
+  { value: "qualified", label: "Qualified" },
+  { value: "quoted", label: "Quoted" },
+  { value: "sold", label: "Sold" },
+  { value: "installed", label: "Installed" },
+  { value: "retention", label: "Retention" },
+];
+
 export default function LeadDetail() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
@@ -47,6 +72,35 @@ export default function LeadDetail() {
     enabled: !!id,
   });
 
+  const updateStageMutation = useMutation({
+    mutationFn: async (newStage: string) => {
+      const { error } = await supabase
+        .from("leads")
+        .update({ lead_stage: newStage as any })
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lead", id] });
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success("Lead stage updated!");
+    },
+  });
+
+  const updateSegmentMutation = useMutation({
+    mutationFn: async (newSegment: string) => {
+      const { error } = await supabase
+        .from("leads")
+        .update({ customer_segment: newSegment as any })
+        .eq("id", id!);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["lead", id] });
+      toast.success("Customer segment updated!");
+    },
+  });
+
   const sendToAgentMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
@@ -60,32 +114,58 @@ export default function LeadDetail() {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       toast.success("Lead sent to Conversation Agent!");
     },
-    onError: () => {
-      toast.error("Failed to send lead to agent.");
-    },
   });
 
-  if (isLoading) {
-    return <div className="p-8 text-center text-muted-foreground">Loading lead...</div>;
-  }
-
-  if (!lead) {
-    return <div className="p-8 text-center text-muted-foreground">Lead not found.</div>;
-  }
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading lead...</div>;
+  if (!lead) return <div className="p-8 text-center text-muted-foreground">Lead not found.</div>;
 
   const missingFields = (lead.missing_fields as string[]) || [];
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
-        <Link to="/leads">
-          <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
-        </Link>
+        <Link to="/leads"><Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button></Link>
         <div className="flex-1">
           <h1 className="font-heading text-3xl font-bold">Lead Profile</h1>
           <p className="text-muted-foreground mt-1">Structured lead ready for agent handoff</p>
         </div>
-        <LeadStatusBadge status={lead.lead_status} />
+        <div className="flex items-center gap-2">
+          <LeadStageBadge stage={lead.lead_stage} />
+          <LeadStatusBadge status={lead.lead_status} />
+        </div>
+      </div>
+
+      {/* Admin Controls */}
+      <div className="glass-card rounded-xl p-4 flex flex-wrap gap-4 items-end">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Pipeline Stage</label>
+          <Select value={lead.lead_stage} onValueChange={(v) => updateStageMutation.mutate(v)}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {leadStages.map((s) => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Customer Segment</label>
+          <Select value={lead.customer_segment || "new_lead"} onValueChange={(v) => updateSegmentMutation.mutate(v)}>
+            <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {Object.entries(segmentLabels).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-muted-foreground">Engagement Score</label>
+          <div className="h-10 flex items-center px-3 rounded-md border border-input bg-background text-sm font-medium">
+            <BarChart3 className="h-3.5 w-3.5 mr-2 text-primary" />
+            {lead.engagement_score ?? 0}/100
+          </div>
+        </div>
       </div>
 
       {/* Structured Lead Profile */}
@@ -93,27 +173,37 @@ export default function LeadDetail() {
         {/* CONTACT INFO */}
         <section>
           <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Contact Info</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-xs text-muted-foreground">Name</p>
-                <p className="text-sm font-medium">{lead.full_name}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { icon: User, label: "Name", value: lead.full_name },
+              { icon: Mail, label: "Email", value: lead.email },
+              { icon: Phone, label: "Phone", value: lead.phone || "Not provided" },
+              { icon: MessageSquare, label: "Preferred Contact", value: lead.preferred_contact ? contactLabels[lead.preferred_contact] : "Any" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-2">
+                <item.icon className="h-4 w-4 text-primary shrink-0" />
+                <div>
+                  <p className="text-xs text-muted-foreground">{item.label}</p>
+                  <p className="text-sm font-medium">{item.value}</p>
+                </div>
               </div>
+            ))}
+          </div>
+        </section>
+
+        <hr className="border-border" />
+
+        {/* LOCATION & ADDRESS */}
+        <section>
+          <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Location</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-primary" />
+              <div><p className="text-xs text-muted-foreground">City</p><p className="text-sm font-medium">{lead.location || "Not provided"}</p></div>
             </div>
             <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-xs text-muted-foreground">Email</p>
-                <p className="text-sm font-medium">{lead.email}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-xs text-muted-foreground">Phone</p>
-                <p className="text-sm font-medium">{lead.phone || "Not provided"}</p>
-              </div>
+              <Home className="h-4 w-4 text-primary" />
+              <div><p className="text-xs text-muted-foreground">Mailing Address</p><p className="text-sm font-medium">{lead.mailing_address || "Not provided"}</p></div>
             </div>
           </div>
         </section>
@@ -123,27 +213,14 @@ export default function LeadDetail() {
         {/* PROJECT DETAILS */}
         <section>
           <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Project Details</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-xs text-muted-foreground">Location</p>
-                <p className="text-sm font-medium">{lead.location || "Not provided"}</p>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-xs text-muted-foreground">Budget Range</p>
-                <p className="text-sm font-medium">{lead.budget ? budgetLabels[lead.budget] : "Not provided"}</p>
-              </div>
+              <div><p className="text-xs text-muted-foreground">Budget Range</p><p className="text-sm font-medium">{lead.budget ? budgetLabels[lead.budget] : "Not provided"}</p></div>
             </div>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" />
-              <div>
-                <p className="text-xs text-muted-foreground">Timeline</p>
-                <p className="text-sm font-medium">{lead.timeline ? timelineLabels[lead.timeline] : "Not provided"}</p>
-              </div>
+              <div><p className="text-xs text-muted-foreground">Timeline</p><p className="text-sm font-medium">{lead.timeline ? timelineLabels[lead.timeline] : "Not provided"}</p></div>
             </div>
           </div>
         </section>
@@ -158,12 +235,21 @@ export default function LeadDetail() {
 
         <hr className="border-border" />
 
-        {/* SOURCE */}
+        {/* SOURCE & ATTRIBUTION */}
         <section>
-          <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Source</h2>
-          <div className="flex items-center gap-2">
-            <Megaphone className="h-4 w-4 text-primary" />
-            <p className="text-sm font-medium">{lead.source ? sourceLabels[lead.source] : "Not provided"}</p>
+          <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Source & Attribution</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { icon: Megaphone, label: "Source", value: lead.source ? sourceLabels[lead.source] : "Not provided" },
+              { icon: User, label: "Referred By", value: lead.referral_source || "—" },
+              { icon: Tag, label: "Campaign", value: lead.campaign_id || "—" },
+              { icon: Search, label: "Keyword", value: lead.keyword_source || "—" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-2">
+                <item.icon className="h-4 w-4 text-primary shrink-0" />
+                <div><p className="text-xs text-muted-foreground">{item.label}</p><p className="text-sm font-medium">{item.value}</p></div>
+              </div>
+            ))}
           </div>
         </section>
 
@@ -175,12 +261,8 @@ export default function LeadDetail() {
               <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Missing Info Flags</h2>
               <div className="flex flex-wrap gap-2">
                 {missingFields.map((field) => (
-                  <span
-                    key={field}
-                    className="inline-flex items-center gap-1 rounded-full bg-warning/10 text-warning px-3 py-1 text-xs font-medium capitalize"
-                  >
-                    <AlertTriangle className="h-3 w-3" />
-                    {field} — ask in follow-up
+                  <span key={field} className="inline-flex items-center gap-1 rounded-full bg-warning/10 text-warning px-3 py-1 text-xs font-medium capitalize">
+                    <AlertTriangle className="h-3 w-3" />{field} — ask in follow-up
                   </span>
                 ))}
               </div>
@@ -208,17 +290,9 @@ export default function LeadDetail() {
         <Button
           onClick={() => sendToAgentMutation.mutate()}
           disabled={lead.sent_to_conversation_agent || sendToAgentMutation.isPending}
-          className="gap-2"
-          size="lg"
+          className="gap-2" size="lg"
         >
-          {lead.sent_to_conversation_agent ? (
-            "Sent to Conversation Agent ✓"
-          ) : (
-            <>
-              Send to Conversation Agent
-              <ArrowRight className="h-4 w-4" />
-            </>
-          )}
+          {lead.sent_to_conversation_agent ? "Sent to Conversation Agent ✓" : (<>Send to Conversation Agent <ArrowRight className="h-4 w-4" /></>)}
         </Button>
       </div>
     </div>

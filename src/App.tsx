@@ -29,6 +29,7 @@ const App = () => (
             <Route path="/review/:id" element={<ReviewContent />} />
             <Route path="/history" element={<ContentHistory />} />
             <Route path="/leads" element={<LeadList />} />
+            <Route path="/leads/pipeline" element={<LeadPipeline />} />
             <Route path="/leads/capture" element={<LeadCapture />} />
             <Route path="/leads/:id" element={<LeadDetail />} />
           </Route>

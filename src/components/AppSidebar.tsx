@@ -10,6 +10,7 @@ const contentNavItems = [
 
 const leadNavItems = [
   { to: "/leads", icon: Users, label: "Leads" },
+  { to: "/leads/pipeline", icon: GitBranch, label: "Pipeline" },
   { to: "/leads/capture", icon: UserPlus, label: "Capture Lead" },
 ];
 
