@@ -2,10 +2,15 @@ import { LayoutDashboard, PenSquare, History, Waves, Users, UserPlus } from "luc
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const contentNavItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/create", icon: PenSquare, label: "Create Content" },
   { to: "/history", icon: History, label: "History" },
+];
+
+const leadNavItems = [
+  { to: "/leads", icon: Users, label: "Leads" },
+  { to: "/leads/capture", icon: UserPlus, label: "Capture Lead" },
 ];
 
 export default function AppSidebar() {
