@@ -33,7 +33,7 @@ const App = () => (
             <Route path="/leads/pipeline" element={<LeadPipeline />} />
             <Route path="/leads/capture" element={<LeadCapture />} />
             <Route path="/leads/:id" element={<LeadDetail />} />
-            <Route path="/leads/:id/qualify" element={<LeadQualification />} />
+            
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
