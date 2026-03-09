@@ -14,7 +14,131 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_log: {
+        Row: {
+          action: string
+          content_id: string | null
+          created_at: string
+          details: Json | null
+          id: string
+          request_id: string | null
+        }
+        Insert: {
+          action: string
+          content_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          request_id?: string | null
+        }
+        Update: {
+          action?: string
+          content_id?: string | null
+          created_at?: string
+          details?: Json | null
+          id?: string
+          request_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "generated_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "content_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_requests: {
+        Row: {
+          additional_context: string | null
+          content_type: Database["public"]["Enums"]["content_type"]
+          created_at: string
+          id: string
+          prompt: string
+          status: Database["public"]["Enums"]["content_status"]
+          target_audience: string | null
+          updated_at: string
+        }
+        Insert: {
+          additional_context?: string | null
+          content_type?: Database["public"]["Enums"]["content_type"]
+          created_at?: string
+          id?: string
+          prompt: string
+          status?: Database["public"]["Enums"]["content_status"]
+          target_audience?: string | null
+          updated_at?: string
+        }
+        Update: {
+          additional_context?: string | null
+          content_type?: Database["public"]["Enums"]["content_type"]
+          created_at?: string
+          id?: string
+          prompt?: string
+          status?: Database["public"]["Enums"]["content_status"]
+          target_audience?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      generated_content: {
+        Row: {
+          content_type: Database["public"]["Enums"]["content_type"]
+          created_at: string
+          id: string
+          image_url: string | null
+          is_approved: boolean
+          posted_at: string | null
+          request_id: string
+          target_platform: Database["public"]["Enums"]["platform_type"] | null
+          text_content: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          content_type: Database["public"]["Enums"]["content_type"]
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_approved?: boolean
+          posted_at?: string | null
+          request_id: string
+          target_platform?: Database["public"]["Enums"]["platform_type"] | null
+          text_content?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          content_type?: Database["public"]["Enums"]["content_type"]
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_approved?: boolean
+          posted_at?: string | null
+          request_id?: string
+          target_platform?: Database["public"]["Enums"]["platform_type"] | null
+          text_content?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_content_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "content_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +147,26 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      content_status:
+        | "draft"
+        | "generating"
+        | "review"
+        | "approved"
+        | "posted"
+        | "rejected"
+      content_type:
+        | "social_post"
+        | "blog_article"
+        | "ad_copy"
+        | "caption"
+        | "image"
+      platform_type:
+        | "linkedin"
+        | "instagram"
+        | "x"
+        | "facebook"
+        | "website"
+        | "other"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +293,30 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      content_status: [
+        "draft",
+        "generating",
+        "review",
+        "approved",
+        "posted",
+        "rejected",
+      ],
+      content_type: [
+        "social_post",
+        "blog_article",
+        "ad_copy",
+        "caption",
+        "image",
+      ],
+      platform_type: [
+        "linkedin",
+        "instagram",
+        "x",
+        "facebook",
+        "website",
+        "other",
+      ],
+    },
   },
 } as const
