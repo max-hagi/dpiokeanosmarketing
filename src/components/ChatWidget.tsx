@@ -71,8 +71,9 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
 
   // Auto-scroll
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const el = scrollRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
     }
   }, [messages, isTyping]);
 
