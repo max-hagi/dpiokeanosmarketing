@@ -89,22 +89,14 @@ export default function ContentHistory() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight">Content History</h1>
-          <p className="text-muted-foreground mt-1">Full log of all generated content and actions</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={exportCSV} className="gap-2" size="sm">
-            <Download className="h-4 w-4" />
-            Export Content
-          </Button>
-          <Button variant="outline" onClick={exportAuditCSV} className="gap-2" size="sm">
-            <Download className="h-4 w-4" />
-            Export Audit Log
-          </Button>
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-end gap-2">
+        <Button variant="outline" onClick={exportCSV} className="gap-2" size="sm">
+          <Download className="h-4 w-4" /> Export Content
+        </Button>
+        <Button variant="outline" onClick={exportAuditCSV} className="gap-2" size="sm">
+          <Download className="h-4 w-4" /> Export Audit Log
+        </Button>
       </div>
 
       <div className="relative">
