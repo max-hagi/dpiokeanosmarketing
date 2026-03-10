@@ -12,6 +12,8 @@ import LeadCapture from "./pages/LeadCapture";
 import LeadList from "./pages/LeadList";
 import LeadDetail from "./pages/LeadDetail";
 import LeadPipeline from "./pages/LeadPipeline";
+import CrmActions from "./pages/CrmActions";
+import FollowUpSequences from "./pages/FollowUpSequences";
 
 import NotFound from "./pages/NotFound";
 
