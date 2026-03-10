@@ -57,7 +57,10 @@ export default function AppSidebar() {
 
         <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/30">Leads</p>
         {leadNavItems.map((item) => {
-          const isActive = location.pathname === item.to || (item.to === "/leads" && location.pathname.startsWith("/leads/") && location.pathname !== "/leads/capture" && location.pathname !== "/leads/pipeline");
+          const isActive = location.pathname === item.to || 
+            (item.to === "/leads" && location.pathname.startsWith("/leads/") && location.pathname !== "/leads/capture" && location.pathname !== "/leads/pipeline") ||
+            (item.to === "/crm" && location.pathname.startsWith("/crm/")) ||
+            (item.to === "/follow-up" && location.pathname.startsWith("/follow-up/"));
           return (
             <NavLink
               key={item.to}
