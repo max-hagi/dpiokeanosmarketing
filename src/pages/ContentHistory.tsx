@@ -117,7 +117,7 @@ export default function ContentHistory() {
         />
       </div>
 
-      <div className="glass-card rounded-xl overflow-hidden">
+      <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Loading...</div>
         ) : filtered && filtered.length > 0 ? (
