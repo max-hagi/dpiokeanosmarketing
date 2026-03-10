@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,13 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2, ArrowRight, Waves } from "lucide-react";
-import ChatWidget from "@/components/ChatWidget";
+import ChatWidget, { getSavedChatSession } from "@/components/ChatWidget";
 
 export default function LeadCapture() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [leadId, setLeadId] = useState<string | null>(null);
   const [chatStarted, setChatStarted] = useState(false);
+
+  // Restore previous session
+  useEffect(() => {
+    const saved = getSavedChatSession();
+    if (saved) {
+      setLeadId(saved.leadId);
+      setFullName(saved.leadName);
+      setChatStarted(true);
+    }
+  }, []);
 
   const startMutation = useMutation({
     mutationFn: async () => {

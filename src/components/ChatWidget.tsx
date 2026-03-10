@@ -2,12 +2,14 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-import { Send, Waves, X, Loader2, CheckCircle2 } from "lucide-react";
+import { Send, Loader2, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import ReactMarkdown from "react-markdown";
+import ChatHeader from "@/components/chat/ChatHeader";
+import TypingIndicator from "@/components/chat/TypingIndicator";
+import QuickReplies, { getQuickReplies } from "@/components/chat/QuickReplies";
 
 interface Message {
   id: string;
@@ -16,14 +18,40 @@ interface Message {
   step_number?: number;
 }
 
-const TOTAL_STEPS = 12;
-
+const TOTAL_STEPS = 13;
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/conversation-agent`;
+const STORAGE_KEY = "okeanos_chat_session";
 
 interface ChatWidgetProps {
   leadId: string;
   leadName: string;
   onComplete?: () => void;
+}
+
+function saveChatSession(leadId: string, leadName: string) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ leadId, leadName, ts: Date.now() }));
+  } catch { /* ignore */ }
+}
+
+export function getSavedChatSession(): { leadId: string; leadName: string } | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    // Expire after 7 days
+    if (Date.now() - data.ts > 7 * 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return { leadId: data.leadId, leadName: data.leadName };
+  } catch {
+    return null;
+  }
+}
+
+export function clearChatSession() {
+  localStorage.removeItem(STORAGE_KEY);
 }
 
 export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetProps) {
@@ -33,12 +61,23 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
   const [isTyping, setIsTyping] = useState(false);
   const [isDone, setIsDone] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const isMobile = useIsMobile();
 
-  const currentStep = messages.filter(m => m.role === "user").length + 1;
+  const userMsgCount = messages.filter(m => m.role === "user").length;
+  const currentStep = userMsgCount + 1;
   const progress = Math.min((currentStep / TOTAL_STEPS) * 100, 100);
+
+  // Persist session
+  useEffect(() => {
+    saveChatSession(leadId, leadName);
+  }, [leadId, leadName]);
+
+  // Quick replies based on last assistant message
+  const lastAssistantMsg = [...messages].reverse().find(m => m.role === "assistant")?.content || "";
+  const quickReplies = isDone || isStreaming || isTyping ? [] : getQuickReplies(userMsgCount, lastAssistantMsg);
 
   // Load existing messages
   useEffect(() => {
@@ -55,13 +94,11 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
           content: m.content,
           step_number: m.step_number ?? undefined,
         })));
-        // Check if done
         const lastMsg = data[data.length - 1];
         if (lastMsg.content.includes("✅") || lastMsg.content.includes("all set")) {
           setIsDone(true);
         }
       } else {
-        // Trigger opening message
         sendToAgent(null);
       }
     };
@@ -72,18 +109,15 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
   // Auto-scroll
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) {
-      el.scrollTop = el.scrollHeight;
-    }
+    if (el) el.scrollTop = el.scrollHeight;
   }, [messages, isTyping]);
 
   const sendToAgent = useCallback(async (userMessage: string | null) => {
-    if (isStreaming) return; // Prevent duplicate calls
+    if (isStreaming) return;
     setIsStreaming(true);
     setIsTyping(true);
 
-    // Show typing for 1-2s
-    await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+    await new Promise(r => setTimeout(r, 800 + Math.random() * 800));
     setIsTyping(false);
 
     try {
@@ -93,40 +127,23 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({
-          leadId,
-          message: userMessage,
-        }),
+        body: JSON.stringify({ leadId, message: userMessage }),
       });
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({}));
-        if (resp.status === 429) {
-          toast.error("Too many requests — please wait a moment.");
-        } else if (resp.status === 402) {
-          toast.error("AI credits exhausted.");
-        } else {
-          toast.error(errData.error || "Failed to get response");
-        }
-
-        // Check if done
-        if (errData.done) {
-          setIsDone(true);
-          extractProfile();
-          return;
-        }
+        if (resp.status === 429) toast.error("Too many requests — please wait a moment.");
+        else if (resp.status === 402) toast.error("AI credits exhausted.");
+        else toast.error(errData.error || "Failed to get response");
+        if (errData.done) { setIsDone(true); extractProfile(); return; }
         setIsStreaming(false);
         return;
       }
 
-      // Check if JSON (done signal) or stream
       const contentType = resp.headers.get("content-type") || "";
       if (contentType.includes("application/json")) {
         const data = await resp.json();
-        if (data.done) {
-          setIsDone(true);
-          extractProfile();
-        }
+        if (data.done) { setIsDone(true); extractProfile(); }
         setIsStreaming(false);
         return;
       }
@@ -168,10 +185,8 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
         }
       }
 
-      // Check if the response indicates conversation is done
       if (assistantContent.includes("✅") || assistantContent.includes("all set")) {
         setIsDone(true);
-        // Wait a moment then extract
         setTimeout(() => extractProfile(), 2000);
       }
     } catch (e) {
@@ -185,7 +200,7 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
   const extractProfile = async () => {
     setIsExtracting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("conversation-agent", {
+      const { error } = await supabase.functions.invoke("conversation-agent", {
         body: { leadId, action: "extract" },
       });
       if (error) throw error;
@@ -197,17 +212,28 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
     }
   };
 
-  const handleSend = async () => {
-    const text = input.trim();
-    if (!text || isStreaming) return;
+  const handleSend = async (text?: string) => {
+    const msg = (text || input).trim();
+    if (!msg || isStreaming) return;
 
-    const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: text };
+    const userMsg: Message = { id: crypto.randomUUID(), role: "user", content: msg };
     setMessages(prev => [...prev, userMsg]);
     setInput("");
+    setShowEndConfirm(false);
 
-    // Save user message via edge function which handles DB save
-    await sendToAgent(text);
+    await sendToAgent(msg);
     inputRef.current?.focus();
+  };
+
+  const handleEndChat = () => {
+    if (showEndConfirm) {
+      // User confirmed — trigger extraction with what we have
+      setIsDone(true);
+      extractProfile();
+      setShowEndConfirm(false);
+    } else {
+      setShowEndConfirm(true);
+    }
   };
 
   return (
@@ -215,34 +241,40 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
       "flex flex-col bg-card border border-border rounded-xl overflow-hidden shadow-lg",
       isMobile ? "fixed inset-0 z-50 rounded-none" : "h-[600px]"
     )}>
-      {/* Header */}
-      <div className="bg-primary px-4 py-3 flex items-center gap-3 shrink-0">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-foreground/20">
-          <Waves className="h-5 w-5 text-primary-foreground" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-primary-foreground">Kai — Okeanos AI Assistant</p>
-          <p className="text-xs text-primary-foreground/70">
-            {isDone ? "Conversation complete ✅" : `Step ${Math.min(currentStep, TOTAL_STEPS)} of ${TOTAL_STEPS}`}
-          </p>
-        </div>
-      </div>
+      <ChatHeader
+        isDone={isDone}
+        currentStep={currentStep}
+        totalSteps={TOTAL_STEPS}
+        progress={progress}
+        onEndChat={handleEndChat}
+        isStreaming={isStreaming}
+      />
 
-      {/* Progress Bar */}
-      <div className="h-1 bg-muted shrink-0">
-        <div
-          className="h-full bg-accent transition-all duration-500"
-          style={{ width: `${isDone ? 100 : progress}%` }}
-        />
-      </div>
+      {/* End chat confirmation */}
+      {showEndConfirm && (
+        <div className="bg-warning/10 border-b border-warning/20 px-4 py-2.5 flex items-center justify-between animate-fade-in">
+          <span className="text-xs text-foreground">End conversation early? We'll save what we have so far.</span>
+          <div className="flex gap-2">
+            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setShowEndConfirm(false)}>Cancel</Button>
+            <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={handleEndChat}>End Chat</Button>
+          </div>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
         <div className="space-y-4">
-          {messages.map((msg) => (
-            <div key={msg.id} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
+          {messages.map((msg, idx) => (
+            <div
+              key={msg.id}
+              className={cn(
+                "flex animate-fade-in",
+                msg.role === "user" ? "justify-end" : "justify-start"
+              )}
+              style={{ animationDelay: `${Math.min(idx * 50, 300)}ms` }}
+            >
               <div className={cn(
-                "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
+                "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed transition-all duration-300",
                 msg.role === "user"
                   ? "bg-primary text-primary-foreground rounded-br-md"
                   : "bg-muted text-foreground rounded-bl-md"
@@ -258,23 +290,10 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
             </div>
           ))}
 
-          {isTyping && (
-            <div className="flex justify-start">
-              <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-xs text-muted-foreground">Kai is typing</span>
-                  <span className="flex gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:0ms]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:150ms]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/50 animate-bounce [animation-delay:300ms]" />
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
+          {isTyping && <TypingIndicator />}
 
           {isDone && (
-            <div className="flex justify-center pt-2">
+            <div className="flex justify-center pt-2 animate-fade-in">
               <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-full px-4 py-2">
                 {isExtracting ? (
                   <>
@@ -292,6 +311,15 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
           )}
         </div>
       </div>
+
+      {/* Quick Replies */}
+      {quickReplies.length > 0 && (
+        <QuickReplies
+          suggestions={quickReplies}
+          onSelect={(text) => handleSend(text)}
+          disabled={isStreaming}
+        />
+      )}
 
       {/* Input */}
       {!isDone && (
