@@ -12,6 +12,8 @@ import LeadCapture from "./pages/LeadCapture";
 import LeadList from "./pages/LeadList";
 import LeadDetail from "./pages/LeadDetail";
 import LeadPipeline from "./pages/LeadPipeline";
+import CrmActions from "./pages/CrmActions";
+import FollowUpSequences from "./pages/FollowUpSequences";
 
 import NotFound from "./pages/NotFound";
 
@@ -33,7 +35,9 @@ const App = () => (
             <Route path="/leads/pipeline" element={<LeadPipeline />} />
             <Route path="/leads/capture" element={<LeadCapture />} />
             <Route path="/leads/:id" element={<LeadDetail />} />
-            
+            <Route path="/crm" element={<CrmActions />} />
+            <Route path="/crm/:id" element={<CrmActions />} />
+            <Route path="/follow-up" element={<FollowUpSequences />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

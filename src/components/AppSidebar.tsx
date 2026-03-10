@@ -1,4 +1,4 @@
-import { LayoutDashboard, PenSquare, History, Waves, Users, MessageCircle, GitBranch } from "lucide-react";
+import { LayoutDashboard, PenSquare, History, Waves, Users, MessageCircle, GitBranch, Brain, Mail } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +12,8 @@ const leadNavItems = [
   { to: "/leads", icon: Users, label: "Leads" },
   { to: "/leads/pipeline", icon: GitBranch, label: "Pipeline" },
   { to: "/leads/capture", icon: MessageCircle, label: "Start Conversation" },
+  { to: "/crm", icon: Brain, label: "CRM & Actions" },
+  { to: "/follow-up", icon: Mail, label: "Follow-Up Sequences" },
 ];
 
 export default function AppSidebar() {
@@ -55,7 +57,10 @@ export default function AppSidebar() {
 
         <p className="px-3 mb-2 text-[10px] font-bold uppercase tracking-[0.15em] text-sidebar-foreground/30">Leads</p>
         {leadNavItems.map((item) => {
-          const isActive = location.pathname === item.to || (item.to === "/leads" && location.pathname.startsWith("/leads/") && location.pathname !== "/leads/capture" && location.pathname !== "/leads/pipeline");
+          const isActive = location.pathname === item.to || 
+            (item.to === "/leads" && location.pathname.startsWith("/leads/") && location.pathname !== "/leads/capture" && location.pathname !== "/leads/pipeline") ||
+            (item.to === "/crm" && location.pathname.startsWith("/crm/")) ||
+            (item.to === "/follow-up" && location.pathname.startsWith("/follow-up/"));
           return (
             <NavLink
               key={item.to}

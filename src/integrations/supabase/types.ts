@@ -124,6 +124,248 @@ export type Database = {
           },
         ]
       }
+      crm_records: {
+        Row: {
+          assigned_actions: Json | null
+          closed_at: string | null
+          created_at: string
+          customer_id: string
+          customer_segment: string | null
+          email_address: string
+          engagement_score: number | null
+          follow_up_sequence: string | null
+          full_name: string
+          id: string
+          initial_contact_date: string | null
+          is_won: boolean | null
+          keyword_source: string | null
+          last_interaction_date: string | null
+          lead_id: string
+          lead_source: string | null
+          lead_stage: string
+          mailing_address: string | null
+          marketing_campaign_id: string | null
+          marketing_opt_in_status: boolean | null
+          notes: string | null
+          persona_match: string | null
+          phone_number: string | null
+          preferred_contact_method: string | null
+          product_ordered: string | null
+          qualification_score: number | null
+          quote_issued_date: string | null
+          quote_value: number | null
+          referral_source: string | null
+          response_time_hours: number | null
+          routing_decision: string | null
+          sales_briefing: string | null
+          sales_rep: string | null
+          score_breakdown: Json | null
+          updated_at: string
+          weak_categories: Json | null
+        }
+        Insert: {
+          assigned_actions?: Json | null
+          closed_at?: string | null
+          created_at?: string
+          customer_id: string
+          customer_segment?: string | null
+          email_address: string
+          engagement_score?: number | null
+          follow_up_sequence?: string | null
+          full_name: string
+          id?: string
+          initial_contact_date?: string | null
+          is_won?: boolean | null
+          keyword_source?: string | null
+          last_interaction_date?: string | null
+          lead_id: string
+          lead_source?: string | null
+          lead_stage?: string
+          mailing_address?: string | null
+          marketing_campaign_id?: string | null
+          marketing_opt_in_status?: boolean | null
+          notes?: string | null
+          persona_match?: string | null
+          phone_number?: string | null
+          preferred_contact_method?: string | null
+          product_ordered?: string | null
+          qualification_score?: number | null
+          quote_issued_date?: string | null
+          quote_value?: number | null
+          referral_source?: string | null
+          response_time_hours?: number | null
+          routing_decision?: string | null
+          sales_briefing?: string | null
+          sales_rep?: string | null
+          score_breakdown?: Json | null
+          updated_at?: string
+          weak_categories?: Json | null
+        }
+        Update: {
+          assigned_actions?: Json | null
+          closed_at?: string | null
+          created_at?: string
+          customer_id?: string
+          customer_segment?: string | null
+          email_address?: string
+          engagement_score?: number | null
+          follow_up_sequence?: string | null
+          full_name?: string
+          id?: string
+          initial_contact_date?: string | null
+          is_won?: boolean | null
+          keyword_source?: string | null
+          last_interaction_date?: string | null
+          lead_id?: string
+          lead_source?: string | null
+          lead_stage?: string
+          mailing_address?: string | null
+          marketing_campaign_id?: string | null
+          marketing_opt_in_status?: boolean | null
+          notes?: string | null
+          persona_match?: string | null
+          phone_number?: string | null
+          preferred_contact_method?: string | null
+          product_ordered?: string | null
+          qualification_score?: number | null
+          quote_issued_date?: string | null
+          quote_value?: number | null
+          referral_source?: string | null
+          response_time_hours?: number | null
+          routing_decision?: string | null
+          sales_briefing?: string | null
+          sales_rep?: string | null
+          score_breakdown?: Json | null
+          updated_at?: string
+          weak_categories?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_records_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: true
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      follow_up_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          lead_id: string
+          message_number: number
+          personalization_tags: Json | null
+          responded_at: string | null
+          scheduled_at: string | null
+          sent_at: string | null
+          sequence_id: string
+          status: string
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          lead_id: string
+          message_number: number
+          personalization_tags?: Json | null
+          responded_at?: string | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sequence_id: string
+          status?: string
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          lead_id?: string
+          message_number?: number
+          personalization_tags?: Json | null
+          responded_at?: string | null
+          scheduled_at?: string | null
+          sent_at?: string | null
+          sequence_id?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_up_messages_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_up_messages_sequence_id_fkey"
+            columns: ["sequence_id"]
+            isOneToOne: false
+            referencedRelation: "follow_up_sequences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      follow_up_sequences: {
+        Row: {
+          created_at: string
+          crm_record_id: string | null
+          current_message_number: number | null
+          edit_before_sending: boolean | null
+          id: string
+          lead_id: string
+          sequence_type: string
+          status: string
+          total_messages: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          crm_record_id?: string | null
+          current_message_number?: number | null
+          edit_before_sending?: boolean | null
+          id?: string
+          lead_id: string
+          sequence_type: string
+          status?: string
+          total_messages?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          crm_record_id?: string | null
+          current_message_number?: number | null
+          edit_before_sending?: boolean | null
+          id?: string
+          lead_id?: string
+          sequence_type?: string
+          status?: string
+          total_messages?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "follow_up_sequences_crm_record_id_fkey"
+            columns: ["crm_record_id"]
+            isOneToOne: false
+            referencedRelation: "crm_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "follow_up_sequences_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       generated_content: {
         Row: {
           content_type: Database["public"]["Enums"]["content_type"]
