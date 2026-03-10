@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -12,9 +12,7 @@ import LeadCapture from "./pages/LeadCapture";
 import LeadList from "./pages/LeadList";
 import LeadDetail from "./pages/LeadDetail";
 import LeadPipeline from "./pages/LeadPipeline";
-import CrmActions from "./pages/CrmActions";
 import FollowUpSequences from "./pages/FollowUpSequences";
-
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,8 +33,8 @@ const App = () => (
             <Route path="/leads/pipeline" element={<LeadPipeline />} />
             <Route path="/leads/capture" element={<LeadCapture />} />
             <Route path="/leads/:id" element={<LeadDetail />} />
-            <Route path="/crm" element={<CrmActions />} />
-            <Route path="/crm/:id" element={<CrmActions />} />
+            <Route path="/crm/:id" element={<Navigate to="/leads/:id" replace />} />
+            <Route path="/crm" element={<Navigate to="/leads" replace />} />
             <Route path="/follow-up" element={<FollowUpSequences />} />
           </Route>
           <Route path="*" element={<NotFound />} />
