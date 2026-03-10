@@ -1,4 +1,4 @@
-import { LayoutDashboard, PenSquare, History, Waves, Users, MessageCircle, GitBranch } from "lucide-react";
+import { LayoutDashboard, PenSquare, History, Waves, Users, MessageCircle, GitBranch, Brain, Mail } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
