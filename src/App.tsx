@@ -33,7 +33,7 @@ const App = () => (
             <Route path="/leads/pipeline" element={<LeadPipeline />} />
             <Route path="/leads/capture" element={<LeadCapture />} />
             <Route path="/leads/:id" element={<LeadDetail />} />
-            <Route path="/crm/:id" element={<Navigate to="/leads/:id" replace />} />
+            <Route path="/crm/:id" element={<CrmRedirect />} />
             <Route path="/crm" element={<Navigate to="/leads" replace />} />
             <Route path="/follow-up" element={<FollowUpSequences />} />
           </Route>
