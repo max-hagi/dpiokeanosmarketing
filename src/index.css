@@ -91,7 +91,7 @@
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     font-family: var(--font-body);
   }
 
@@ -106,7 +106,7 @@
   }
 
   .animate-fade-in {
-    animation: fadeIn 0.35s ease-out both;
+    animation: fadeIn 0.4s ease-out both;
   }
 }
 
