@@ -55,7 +55,9 @@ STEP 8 (Trigger): "What pushed this from a 'someday' project to something you're
 STEP 9 (Concerns): "A lot of people come to us after hearing not-so-great stories about contractors. Is there anything you're worried about?"
 STEP 10 (Decision Maker): "Will you be the one making the final call, or is there a partner or spouse to loop in?"
 STEP 11 (Source): "Last one — how did you hear about us?"
-STEP 12 (Closing): Adapt based on signals — strong signals get proposal offer, weaker get info package promise. End with confirmation and "keep an eye on your inbox" message.
+STEP 12 (Phone): "Great chatting with you! What's the best phone number to reach you at? This way our team can follow up with a personalized quote."
+  - If they decline, say "No worries — we'll reach out by email instead."
+STEP 13 (Closing): Adapt based on signals — strong signals get proposal offer, weaker get info package promise. End with confirmation and "keep an eye on your inbox" message.
 
 CONTRACTOR FLOW (if Step 2 reveals contractor/landscaper):
 Ask: "Are you looking to subcontract pool installations for your clients, or are you a pool builder looking for shell supply and training?"
