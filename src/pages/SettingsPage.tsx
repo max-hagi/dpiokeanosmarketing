@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   Search, Download, Activity, Mail, Brain, Target,
-  Users, AlertTriangle, CheckCircle, Settings, Sliders
+  Users, AlertTriangle, CheckCircle, Settings, Sliders,
+  MapPin, DollarSign, Clock, Wrench, UserCheck, Send,
+  FileText, ArrowRight, Pause, RotateCcw, XCircle
 } from "lucide-react";
-import { format, isThisWeek } from "date-fns";
+import { format, isThisWeek, formatDistanceToNow } from "date-fns";
 import { useSearchParams } from "react-router-dom";
 
 const tabs = [
@@ -17,13 +19,121 @@ const tabs = [
   { key: "config", label: "Configuration" },
 ];
 
+// Human-readable action labels and descriptions
+const ACTION_MAP: Record<string, { label: string; description: string; icon: typeof Mail; color: string }> = {
+  "follow_up_sequence_created": {
+    label: "Follow-up sequence started",
+    description: "Automated email sequence was created for a lead",
+    icon: Send,
+    color: "text-blue-500",
+  },
+  "crm_record_created": {
+    label: "Added to CRM",
+    description: "Lead was scored and a CRM record was created",
+    icon: UserCheck,
+    color: "text-green-500",
+  },
+  "lead_qualified": {
+    label: "Lead qualified",
+    description: "Lead scored above threshold and was marked as qualified",
+    icon: CheckCircle,
+    color: "text-green-500",
+  },
+  "lead_scored": {
+    label: "Lead scored",
+    description: "Qualification score was calculated",
+    icon: Target,
+    color: "text-amber-500",
+  },
+  "routing_decision": {
+    label: "Routing decided",
+    description: "System determined next steps for this lead",
+    icon: ArrowRight,
+    color: "text-primary",
+  },
+  "sequence_paused": {
+    label: "Sequence paused",
+    description: "Lead replied — automated emails paused for human follow-up",
+    icon: Pause,
+    color: "text-amber-500",
+  },
+  "sequence_completed": {
+    label: "Sequence finished",
+    description: "All scheduled emails in the sequence have been sent",
+    icon: CheckCircle,
+    color: "text-green-500",
+  },
+};
+
+function humanizeAction(action: string): { label: string; icon: typeof Mail; color: string } {
+  const mapped = ACTION_MAP[action];
+  if (mapped) return { label: mapped.label, icon: mapped.icon, color: mapped.color };
+
+  // Fallback: convert snake_case to readable
+  const label = action
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, c => c.toUpperCase());
+  return { label, icon: Activity, color: "text-muted-foreground" };
+}
+
+function humanizeDetail(action: string, details: any): string {
+  if (!details) return "";
+  if (typeof details === "string") return details;
+
+  const d = details as Record<string, any>;
+
+  if (action === "follow_up_sequence_created") {
+    const seqLabels: Record<string, string> = {
+      A: "Qualified Lead",
+      B: "Nurture",
+      C: "Budget Recovery",
+      D: "Location Recovery",
+    };
+    const seqName = seqLabels[d.sequence_type] || `Sequence ${d.sequence_type}`;
+    return `${seqName} sequence — ${d.message_count || "?"} emails scheduled`;
+  }
+
+  if (action === "crm_record_created") {
+    return `Routed as ${d.routing_decision || "unknown"} with score ${d.qualification_score || "?"}/100`;
+  }
+
+  // Generic fallback: pick useful keys
+  const useful = ["lead_name", "full_name", "routing_decision", "score", "qualification_score", "sequence_type"];
+  const parts = useful
+    .filter(k => d[k])
+    .map(k => `${k.replace(/_/g, " ")}: ${d[k]}`);
+  return parts.length > 0 ? parts.join(" · ") : JSON.stringify(d).slice(0, 120);
+}
+
+const SEQUENCE_INFO: Record<string, { name: string; description: string; icon: typeof Mail }> = {
+  A: {
+    name: "Qualified Lead Follow-Up",
+    description: "For leads scoring 50+. Summary email → gentle nudge → educational resource → final check-in over 14 days.",
+    icon: CheckCircle,
+  },
+  B: {
+    name: "Nurture Sequence",
+    description: "For leads scoring below 50. Educational content and periodic check-ins over 45 days to build trust and re-score.",
+    icon: RotateCcw,
+  },
+  C: {
+    name: "Budget Recovery",
+    description: "For leads who didn't share budget or indicated below $35k. Transparent pricing breakdown sent immediately.",
+    icon: DollarSign,
+  },
+  D: {
+    name: "Location Recovery",
+    description: "For leads outside the core service area or with unconfirmed location. Quick location check sent immediately.",
+    icon: MapPin,
+  },
+};
+
 export default function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get("tab") || "log";
   const [search, setSearch] = useState("");
   const setTab = (tab: string) => setSearchParams({ tab });
 
-  // Automation log: combination of audit_log, follow-up messages, CRM records
   const { data: auditLogs } = useQuery({
     queryKey: ["audit-logs"],
     queryFn: async () => {
@@ -60,58 +170,68 @@ export default function SettingsPage() {
     },
   });
 
-  // Build unified activity feed
-  const activityFeed: Array<{ time: string; action: string; detail: string; icon: typeof Mail }> = [];
+  // Build unified activity feed with humanized labels
+  const activityFeed: Array<{ time: string; label: string; detail: string; icon: typeof Mail; color: string }> = [];
 
   followUpMessages?.forEach(m => {
     if (m.sent_at) {
+      const leadName = (m as any).leads?.full_name || "Unknown";
       activityFeed.push({
         time: m.sent_at,
-        action: "Email Sent",
-        detail: `Msg ${m.message_number} to ${(m as any).leads?.full_name || "Unknown"}: ${m.subject}`,
+        label: `Email sent to ${leadName}`,
+        detail: `Message ${m.message_number}: "${m.subject}"`,
         icon: Mail,
+        color: "text-blue-500",
       });
     }
   });
 
   crmRecords?.forEach(r => {
+    const segment = r.customer_segment || "New Lead";
     activityFeed.push({
       time: r.created_at,
-      action: "CRM Record Created",
-      detail: `${r.full_name} — ${r.routing_decision} (Score: ${r.qualification_score}/100)`,
-      icon: Brain,
+      label: `${r.full_name} added to CRM`,
+      detail: `Scored ${r.qualification_score || 0}/100 · Routed as ${r.routing_decision || "Pending"} · Segment: ${segment}`,
+      icon: UserCheck,
+      color: "text-green-500",
     });
   });
 
   auditLogs?.forEach(log => {
+    const { label, icon, color } = humanizeAction(log.action);
     activityFeed.push({
       time: log.created_at,
-      action: log.action,
-      detail: typeof log.details === "string" ? log.details : JSON.stringify(log.details || {}),
-      icon: Activity,
+      label,
+      detail: humanizeDetail(log.action, log.details),
+      icon,
+      color,
     });
   });
 
   activityFeed.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
 
   const filteredFeed = search
-    ? activityFeed.filter(a => a.action.toLowerCase().includes(search.toLowerCase()) || a.detail.toLowerCase().includes(search.toLowerCase()))
+    ? activityFeed.filter(a => a.label.toLowerCase().includes(search.toLowerCase()) || a.detail.toLowerCase().includes(search.toLowerCase()))
     : activityFeed;
 
-  // Sequence health
-  const sequenceHealth = ["A", "B", "C", "D"].map(type => {
+  // Sequence health with human-readable info
+  const sequenceHealth = (["A", "B", "C", "D"] as const).map(type => {
+    const info = SEQUENCE_INFO[type];
     const seqs = sequences?.filter((s: any) => s.sequence_type === type) || [];
     const activeSeqs = seqs.filter((s: any) => s.status === "active");
+    const pausedSeqs = seqs.filter((s: any) => s.status === "paused");
     const msgs = followUpMessages?.filter(m => seqs.some((s: any) => s.lead_id === m.lead_id)) || [];
     const sentThisWeek = msgs.filter(m => m.sent_at && isThisWeek(new Date(m.sent_at))).length;
     const replied = msgs.filter(m => m.responded_at).length;
     const requalified = seqs.filter((s: any) => s.status === "completed").length;
     return {
       type,
-      label: type === "A" ? "Qualified" : type === "B" ? "Nurture" : type === "C" ? "Budget Recovery" : "Location Recovery",
+      name: info.name,
+      description: info.description,
+      Icon: info.icon,
       activeLeads: activeSeqs.length,
+      pausedLeads: pausedSeqs.length,
       sentThisWeek,
-      openRate: "—",
       replyRate: msgs.length > 0 ? `${Math.round((replied / msgs.length) * 100)}%` : "—",
       requalified,
       warning: activeSeqs.length > 0 && sentThisWeek === 0,
@@ -146,28 +266,31 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Filter by action or detail..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-10 rounded-xl" />
+            <Input placeholder="Search activity — e.g. 'email sent', 'CRM', a lead name..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-10 rounded-xl" />
           </div>
           <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
             {filteredFeed.length > 0 ? (
               <div className="divide-y divide-border">
                 {filteredFeed.slice(0, 100).map((item, i) => (
-                  <div key={i} className="flex items-start gap-3 px-5 py-3">
-                    <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center shrink-0 mt-0.5">
-                      <item.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <div key={i} className="flex items-start gap-3 px-5 py-3.5">
+                    <div className={`h-7 w-7 rounded-lg bg-muted flex items-center justify-center shrink-0 mt-0.5`}>
+                      <item.icon className={`h-3.5 w-3.5 ${item.color}`} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium">{item.action}</p>
-                      <p className="text-xs text-muted-foreground truncate">{item.detail}</p>
+                      <p className="text-sm font-medium">{item.label}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{item.detail}</p>
                     </div>
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">{format(new Date(item.time), "MMM d, h:mm a")}</span>
+                    <span className="text-[11px] text-muted-foreground whitespace-nowrap mt-0.5">
+                      {formatDistanceToNow(new Date(item.time), { addSuffix: true })}
+                    </span>
                   </div>
                 ))}
               </div>
             ) : (
               <div className="p-16 text-center">
                 <Activity className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground">No activity recorded yet</p>
+                <p className="text-sm font-medium">No activity yet</p>
+                <p className="text-xs text-muted-foreground mt-1">When leads are scored, emails sent, or CRM records created, they'll show up here.</p>
               </div>
             )}
           </div>
@@ -176,45 +299,57 @@ export default function SettingsPage() {
 
       {/* Sequence Status */}
       {activeTab === "sequences" && (
-        <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-muted/30">
-                {["Sequence", "Active Leads", "Emails This Week", "Open Rate", "Reply Rate", "Re-qualified", ""].map(h => (
-                  <th key={h} className="text-left text-xs font-semibold text-muted-foreground px-5 py-3 uppercase tracking-wider">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {sequenceHealth.map(s => (
-                <tr key={s.type} className="hover:bg-muted/30">
-                  <td className="px-5 py-3">
-                    <p className="text-sm font-medium">Sequence {s.type}</p>
-                    <p className="text-xs text-muted-foreground">{s.label}</p>
-                  </td>
-                  <td className="px-5 py-3 text-sm font-mono">{s.activeLeads}</td>
-                  <td className="px-5 py-3 text-sm font-mono">{s.sentThisWeek}</td>
-                  <td className="px-5 py-3 text-sm text-muted-foreground">{s.openRate}</td>
-                  <td className="px-5 py-3 text-sm">{s.replyRate}</td>
-                  <td className="px-5 py-3 text-sm font-mono">{s.requalified}</td>
-                  <td className="px-5 py-3">
-                    {s.warning && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 text-warning px-2 py-0.5 text-[9px] font-bold">
-                        <AlertTriangle className="h-2.5 w-2.5" /> No emails
-                      </span>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">These are the automated email sequences running in the background. Each one handles a different type of lead based on their qualification score.</p>
+          <div className="grid gap-4">
+            {sequenceHealth.map(s => (
+              <div key={s.type} className="glass-card rounded-2xl p-5 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-xl bg-muted flex items-center justify-center">
+                      <s.Icon className="h-4 w-4 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">{s.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 max-w-lg">{s.description}</p>
+                    </div>
+                  </div>
+                  {s.warning && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 text-destructive px-2.5 py-1 text-[10px] font-bold shrink-0">
+                      <AlertTriangle className="h-3 w-3" /> No emails sent this week
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                  <div className="rounded-lg bg-muted/50 px-3 py-2">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Active leads</p>
+                    <p className="text-lg font-bold font-mono mt-0.5">{s.activeLeads}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 px-3 py-2">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Emails this week</p>
+                    <p className="text-lg font-bold font-mono mt-0.5">{s.sentThisWeek}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 px-3 py-2">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Reply rate</p>
+                    <p className="text-lg font-bold font-mono mt-0.5">{s.replyRate}</p>
+                  </div>
+                  <div className="rounded-lg bg-muted/50 px-3 py-2">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Re-qualified</p>
+                    <p className="text-lg font-bold font-mono mt-0.5">{s.requalified}</p>
+                    {s.pausedLeads > 0 && (
+                      <p className="text-[10px] text-amber-500 mt-0.5">{s.pausedLeads} paused (replied)</p>
                     )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {/* Configuration */}
       {activeTab === "config" && (
         <div className="space-y-6">
-          {/* Connection Status */}
           <div className="glass-card rounded-2xl p-6 space-y-4">
             <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider">Connection Status</h2>
             <div className="space-y-3">
@@ -225,13 +360,12 @@ export default function SettingsPage() {
               ].map(c => (
                 <div key={c.label} className="flex items-center justify-between rounded-lg border border-border p-3">
                   <span className="text-sm font-medium">{c.label}</span>
-                  <span className={`text-xs font-bold ${c.connected ? "text-success" : "text-muted-foreground"}`}>{c.status}</span>
+                  <span className={`text-xs font-bold ${c.connected ? "text-green-600" : "text-muted-foreground"}`}>{c.status}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Scoring Threshold */}
           <div className="glass-card rounded-2xl p-6 space-y-4">
             <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider">Scoring Settings</h2>
             <div className="flex items-center justify-between">
@@ -243,7 +377,6 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Notification Preferences */}
           <div className="glass-card rounded-2xl p-6 space-y-4">
             <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider">Notifications</h2>
             <div className="space-y-3">
@@ -260,19 +393,21 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Agent Toggles */}
           <div className="glass-card rounded-2xl p-6 space-y-4">
             <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider">Agent Controls</h2>
             <div className="space-y-3">
               {[
-                { label: "Conversation Agent (Kai)", default: true },
-                { label: "Qualification Agent", default: true },
-                { label: "CRM Action Agent", default: true },
-                { label: "Follow-Up Agent", default: true },
-                { label: "Marketing Content Agent", default: true },
+                { label: "Conversation Agent (Kai)", desc: "Chats with incoming leads to gather project info", default: true },
+                { label: "Qualification Agent", desc: "Scores leads across 5 categories (0–100)", default: true },
+                { label: "CRM Action Agent", desc: "Creates CRM records and prescribes recovery actions", default: true },
+                { label: "Follow-Up Agent", desc: "Generates personalized email sequences", default: true },
+                { label: "Marketing Content Agent", desc: "Creates social posts, ads, and blog content", default: true },
               ].map(a => (
                 <div key={a.label} className="flex items-center justify-between">
-                  <span className="text-sm">{a.label}</span>
+                  <div>
+                    <span className="text-sm font-medium">{a.label}</span>
+                    <p className="text-xs text-muted-foreground">{a.desc}</p>
+                  </div>
                   <Switch defaultChecked={a.default} />
                 </div>
               ))}
