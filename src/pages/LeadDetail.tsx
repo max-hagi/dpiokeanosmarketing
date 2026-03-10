@@ -457,6 +457,21 @@ export default function LeadDetail() {
       )}
 
       <QualificationReport lead={lead} />
+
+      {/* CRM Agent link */}
+      {lead.qualification_data && (
+        <div className="glass-card rounded-xl p-5 flex items-center justify-between">
+          <div>
+            <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider">Next Step: CRM & Follow-Up</h2>
+            <p className="text-xs text-muted-foreground mt-1">Run the CRM Action Agent to create a CRM record, assign recovery actions, and generate personalized follow-up sequences.</p>
+          </div>
+          <Link to={`/crm/${lead.id}`}>
+            <Button className="gap-2 shadow-md">
+              <Brain className="h-4 w-4" /> Open CRM & Actions
+            </Button>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
