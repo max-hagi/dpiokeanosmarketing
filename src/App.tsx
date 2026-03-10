@@ -35,7 +35,9 @@ const App = () => (
             <Route path="/leads/pipeline" element={<LeadPipeline />} />
             <Route path="/leads/capture" element={<LeadCapture />} />
             <Route path="/leads/:id" element={<LeadDetail />} />
-            
+            <Route path="/crm" element={<CrmActions />} />
+            <Route path="/crm/:id" element={<CrmActions />} />
+            <Route path="/follow-up" element={<FollowUpSequences />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>

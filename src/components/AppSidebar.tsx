@@ -12,6 +12,8 @@ const leadNavItems = [
   { to: "/leads", icon: Users, label: "Leads" },
   { to: "/leads/pipeline", icon: GitBranch, label: "Pipeline" },
   { to: "/leads/capture", icon: MessageCircle, label: "Start Conversation" },
+  { to: "/crm", icon: Brain, label: "CRM & Actions" },
+  { to: "/follow-up", icon: Mail, label: "Follow-Up Sequences" },
 ];
 
 export default function AppSidebar() {
