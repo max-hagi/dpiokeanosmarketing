@@ -39,7 +39,6 @@ export function getSavedChatSession(): { leadId: string; leadName: string } | nu
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const data = JSON.parse(raw);
-    // Expire after 7 days
     if (Date.now() - data.ts > 7 * 24 * 60 * 60 * 1000) {
       localStorage.removeItem(STORAGE_KEY);
       return null;
@@ -70,16 +69,13 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
   const currentStep = userMsgCount + 1;
   const progress = Math.min((currentStep / TOTAL_STEPS) * 100, 100);
 
-  // Persist session
   useEffect(() => {
     saveChatSession(leadId, leadName);
   }, [leadId, leadName]);
 
-  // Quick replies based on last assistant message
   const lastAssistantMsg = [...messages].reverse().find(m => m.role === "assistant")?.content || "";
   const quickReplies = isDone || isStreaming || isTyping ? [] : getQuickReplies(userMsgCount, lastAssistantMsg);
 
-  // Load existing messages
   useEffect(() => {
     const loadMessages = async () => {
       const { data } = await supabase
@@ -106,7 +102,6 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadId]);
 
-  // Auto-scroll
   useEffect(() => {
     const el = scrollRef.current;
     if (el) el.scrollTop = el.scrollHeight;
@@ -148,7 +143,6 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
         return;
       }
 
-      // Stream SSE
       const reader = resp.body!.getReader();
       const decoder = new TextDecoder();
       let assistantContent = "";
@@ -227,7 +221,6 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
 
   const handleEndChat = () => {
     if (showEndConfirm) {
-      // User confirmed — trigger extraction with what we have
       setIsDone(true);
       extractProfile();
       setShowEndConfirm(false);
@@ -238,8 +231,8 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
 
   return (
     <div className={cn(
-      "flex flex-col bg-card border border-border rounded-xl overflow-hidden shadow-lg",
-      isMobile ? "fixed inset-0 z-50 rounded-none" : "h-[600px]"
+      "flex flex-col bg-card border border-border rounded-2xl overflow-hidden shadow-xl",
+      isMobile ? "fixed inset-0 z-50 rounded-none" : "h-[620px]"
     )}>
       <ChatHeader
         isDone={isDone}
@@ -250,10 +243,9 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
         isStreaming={isStreaming}
       />
 
-      {/* End chat confirmation */}
       {showEndConfirm && (
         <div className="bg-warning/10 border-b border-warning/20 px-4 py-2.5 flex items-center justify-between animate-fade-in">
-          <span className="text-xs text-foreground">End conversation early? We'll save what we have so far.</span>
+          <span className="text-xs text-foreground">End the conversation? We'll save your progress.</span>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setShowEndConfirm(false)}>Cancel</Button>
             <Button size="sm" variant="destructive" className="h-7 text-xs" onClick={handleEndChat}>End Chat</Button>
@@ -263,7 +255,7 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4" ref={scrollRef}>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {messages.map((msg, idx) => (
             <div
               key={msg.id}
@@ -271,13 +263,13 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
                 "flex animate-fade-in",
                 msg.role === "user" ? "justify-end" : "justify-start"
               )}
-              style={{ animationDelay: `${Math.min(idx * 50, 300)}ms` }}
+              style={{ animationDelay: `${Math.min(idx * 40, 200)}ms` }}
             >
               <div className={cn(
-                "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed transition-all duration-300",
+                "max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed",
                 msg.role === "user"
-                  ? "bg-primary text-primary-foreground rounded-br-md"
-                  : "bg-muted text-foreground rounded-bl-md"
+                  ? "bg-primary text-primary-foreground rounded-br-sm shadow-md"
+                  : "bg-muted text-foreground rounded-bl-sm"
               )}>
                 {msg.role === "assistant" ? (
                   <div className="prose prose-sm max-w-none dark:prose-invert [&>p]:mb-1 [&>p:last-child]:mb-0">
@@ -293,17 +285,17 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
           {isTyping && <TypingIndicator />}
 
           {isDone && (
-            <div className="flex justify-center pt-2 animate-fade-in">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-full px-4 py-2">
+            <div className="flex justify-center pt-3 animate-fade-in">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 rounded-full px-5 py-2.5 shadow-sm">
                 {isExtracting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    Building your lead profile...
+                    Wrapping things up...
                   </>
                 ) : (
                   <>
                     <CheckCircle2 className="h-4 w-4 text-success" />
-                    Conversation complete — profile sent to qualification
+                    All done! We'll be in touch soon 🎉
                   </>
                 )}
               </div>

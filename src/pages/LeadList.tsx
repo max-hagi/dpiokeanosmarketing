@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Download, Search, Users } from "lucide-react";
+import { Download, Search, Users, UserCheck, AlertCircle, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -59,72 +59,84 @@ export default function LeadList() {
     URL.revokeObjectURL(url);
   };
 
+  const statCards = [
+    { label: "Total Leads", value: stats.total, icon: Users, gradient: "from-primary/10 to-primary/5", iconColor: "text-primary" },
+    { label: "Complete", value: stats.complete, icon: UserCheck, gradient: "from-success/10 to-success/5", iconColor: "text-success" },
+    { label: "Incomplete", value: stats.incomplete, icon: AlertCircle, gradient: "from-warning/10 to-warning/5", iconColor: "text-warning" },
+    { label: "In Conversation", value: stats.sent, icon: MessageCircle, gradient: "from-accent/10 to-accent/5", iconColor: "text-accent" },
+  ];
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-3xl font-bold">Leads</h1>
+          <h1 className="font-heading text-3xl font-bold tracking-tight">Leads</h1>
           <p className="text-muted-foreground mt-1">All captured lead inquiries</p>
         </div>
         <div className="flex gap-2">
           <Link to="/leads/pipeline"><Button variant="outline" className="gap-2">Pipeline View</Button></Link>
-          <Link to="/leads/capture"><Button className="gap-2"><Users className="h-4 w-4" /> New Lead</Button></Link>
+          <Link to="/leads/capture"><Button className="gap-2 shadow-md"><Users className="h-4 w-4" /> New Lead</Button></Link>
           <Button variant="outline" onClick={exportCSV} className="gap-2" size="sm"><Download className="h-4 w-4" /> Export CSV</Button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-        {[
-          { label: "Total Leads", value: stats.total, color: "text-primary" },
-          { label: "Complete", value: stats.complete, color: "text-success" },
-          { label: "Incomplete", value: stats.incomplete, color: "text-warning" },
-          { label: "Sent to Agent", value: stats.sent, color: "text-accent" },
-        ].map((s) => (
-          <div key={s.label} className="glass-card rounded-xl p-5">
-            <p className="text-sm text-muted-foreground">{s.label}</p>
-            <p className={`font-heading text-3xl font-bold mt-2 ${s.color}`}>{s.value}</p>
+        {statCards.map((s) => (
+          <div key={s.label} className={`glass-card rounded-2xl p-5 bg-gradient-to-br ${s.gradient} hover:shadow-md transition-shadow duration-300`}>
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-muted-foreground">{s.label}</p>
+              <div className={`h-9 w-9 rounded-xl bg-card flex items-center justify-center shadow-sm ${s.iconColor}`}>
+                <s.icon className="h-4 w-4" />
+              </div>
+            </div>
+            <p className="font-heading text-3xl font-bold mt-3 tracking-tight">{s.value}</p>
           </div>
         ))}
       </div>
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search by name, email, or location..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        <Input placeholder="Search by name, email, or location..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-11 rounded-xl" />
       </div>
 
-      <div className="glass-card rounded-xl overflow-hidden">
+      <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
         {isLoading ? (
           <div className="p-8 text-center text-muted-foreground">Loading...</div>
         ) : filtered && filtered.length > 0 ? (
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Date</th>
-                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Name</th>
-                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Location</th>
-                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Budget</th>
-                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Stage</th>
-                <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">Status</th>
+                <th className="text-left text-xs font-semibold text-muted-foreground px-5 py-3.5 uppercase tracking-wider">Date</th>
+                <th className="text-left text-xs font-semibold text-muted-foreground px-5 py-3.5 uppercase tracking-wider">Name</th>
+                <th className="text-left text-xs font-semibold text-muted-foreground px-5 py-3.5 uppercase tracking-wider">Location</th>
+                <th className="text-left text-xs font-semibold text-muted-foreground px-5 py-3.5 uppercase tracking-wider">Budget</th>
+                <th className="text-left text-xs font-semibold text-muted-foreground px-5 py-3.5 uppercase tracking-wider">Stage</th>
+                <th className="text-left text-xs font-semibold text-muted-foreground px-5 py-3.5 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((lead) => (
                 <tr key={lead.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">{format(new Date(lead.created_at), "MMM d, yyyy")}</td>
-                  <td className="px-4 py-3">
+                  <td className="px-5 py-3.5 text-sm text-muted-foreground whitespace-nowrap">{format(new Date(lead.created_at), "MMM d, yyyy")}</td>
+                  <td className="px-5 py-3.5">
                     <Link to={`/leads/${lead.id}`} className="text-sm font-medium hover:text-primary transition-colors">{lead.full_name}</Link>
-                    <p className="text-xs text-muted-foreground">{lead.email}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{lead.email}</p>
                   </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">{lead.location || "—"}</td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground capitalize">{lead.budget ? lead.budget.replace(/_/g, " ").replace("k", "K") : "—"}</td>
-                  <td className="px-4 py-3"><LeadStageBadge stage={lead.lead_stage} /></td>
-                  <td className="px-4 py-3"><LeadStatusBadge status={lead.lead_status} /></td>
+                  <td className="px-5 py-3.5 text-sm text-muted-foreground">{lead.location || "—"}</td>
+                  <td className="px-5 py-3.5 text-sm text-muted-foreground capitalize">{lead.budget ? lead.budget.replace(/_/g, " ").replace("k", "K") : "—"}</td>
+                  <td className="px-5 py-3.5"><LeadStageBadge stage={lead.lead_stage} /></td>
+                  <td className="px-5 py-3.5"><LeadStatusBadge status={lead.lead_status} /></td>
                 </tr>
               ))}
             </tbody>
           </table>
         ) : (
-          <div className="p-12 text-center">
+          <div className="p-16 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="h-14 w-14 rounded-2xl bg-muted flex items-center justify-center">
+                <Users className="h-6 w-6 text-muted-foreground" />
+              </div>
+            </div>
             <p className="text-muted-foreground mb-4">No leads captured yet.</p>
             <Link to="/leads/capture"><Button variant="outline" className="gap-2"><Users className="h-4 w-4" /> Capture First Lead</Button></Link>
           </div>
