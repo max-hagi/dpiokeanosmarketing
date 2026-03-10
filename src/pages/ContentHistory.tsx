@@ -89,10 +89,10 @@ export default function ContentHistory() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-3xl font-bold">Content History</h1>
+          <h1 className="font-heading text-3xl font-bold tracking-tight">Content History</h1>
           <p className="text-muted-foreground mt-1">Full log of all generated content and actions</p>
         </div>
         <div className="flex gap-2">
