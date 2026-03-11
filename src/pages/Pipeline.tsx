@@ -223,11 +223,12 @@ export default function Pipeline() {
 
       {/* TAB: Leads (unified) */}
       {activeTab === "leads" && (
-        <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
+          <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
           ) : filter(activeLeads).length > 0 ? (
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   {["Name", "Date", "Score", "Routing", "Nurture", "Status", ""].map(h => (
