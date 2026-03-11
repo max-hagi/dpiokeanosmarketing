@@ -89,6 +89,7 @@ export default function Pipeline() {
       if (error) throw error;
       return data;
     },
+    refetchInterval: 8000,
   });
 
   const { data: sequences } = useQuery({
