@@ -125,6 +125,22 @@ export default function Pipeline() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Scoring failed"),
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: async ({ leadId, archive }: { leadId: string; archive: boolean }) => {
+      const { error } = await supabase.from("leads").update({ is_archived: archive } as any).eq("id", leadId);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success(vars.archive ? "Lead archived" : "Lead restored");
+      setSelectedLeadId(null);
+    },
+    onError: () => toast.error("Failed to update lead"),
+  });
+
+  const activeLeads = leads?.filter(l => !(l as any).is_archived) || [];
+  const archivedLeads = leads?.filter(l => (l as any).is_archived) || [];
+
   const filter = (list: any[]) => list.filter(l =>
     l.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     l.email?.toLowerCase().includes(search.toLowerCase())
