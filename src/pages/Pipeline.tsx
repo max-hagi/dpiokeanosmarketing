@@ -13,6 +13,10 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { Link, useSearchParams } from "react-router-dom";
 import LeadStageBadge from "@/components/LeadStageBadge";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const budgetLabels: Record<string, string> = {
   under_30k: "<$30K", "30k_50k": "$30-50K", "50k_80k": "$50-80K", "80k_plus": "$80K+",
