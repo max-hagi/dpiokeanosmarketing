@@ -220,7 +220,7 @@ export default function Pipeline() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filter(leads || []).map(lead => {
+                {filter(activeLeads).map(lead => {
                   const status = getConversationStatus(lead);
                   return (
                     <tr key={lead.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setSelectedLeadId(lead.id)}>
