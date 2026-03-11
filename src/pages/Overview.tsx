@@ -135,28 +135,30 @@ export default function Overview() {
         <div className="px-6 py-4 border-b border-border">
           <h2 className="font-heading text-lg font-semibold tracking-tight">Today's Action Items</h2>
         </div>
-        <div className="overflow-x-auto">
-          <div className="divide-y divide-border min-w-[600px]">
-            {actionItems.slice(0, 10).map((item, i) => {
-              const p = priorityConfig[item.priority];
-              return (
-                <div key={i} className="flex items-center gap-4 px-6 py-3.5">
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${p.bg} ${p.color}`}>
-                    {p.label}
-                  </span>
-                  <span className="text-sm font-medium flex-1">{item.name}</span>
-                  <span className="text-sm text-muted-foreground">{item.action}</span>
-                  <span className="text-xs text-muted-foreground w-16 text-right">{item.time}</span>
-                  <Link to={`/pipeline/lead/${item.leadId}`}>
-                    <Button variant="ghost" size="sm" className="gap-1 text-xs">
-                      <ArrowRight className="h-3.5 w-3.5" /> View
-                    </Button>
-                  </Link>
-                </div>
-              );
-            })}
+        {actionItems.length > 0 ? (
+          <div className="overflow-x-auto">
+            <div className="divide-y divide-border min-w-[600px]">
+              {actionItems.slice(0, 10).map((item, i) => {
+                const p = priorityConfig[item.priority];
+                return (
+                  <div key={i} className="flex items-center gap-4 px-6 py-3.5">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase ${p.bg} ${p.color}`}>
+                      {p.label}
+                    </span>
+                    <span className="text-sm font-medium flex-1">{item.name}</span>
+                    <span className="text-sm text-muted-foreground">{item.action}</span>
+                    <span className="text-xs text-muted-foreground w-16 text-right">{item.time}</span>
+                    <Link to={`/pipeline/lead/${item.leadId}`}>
+                      <Button variant="ghost" size="sm" className="gap-1 text-xs">
+                        <ArrowRight className="h-3.5 w-3.5" /> View
+                      </Button>
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-          </div>
+        ) : (
           <div className="p-10 text-center">
             <p className="text-muted-foreground">✅ You're all caught up. The system is handling the rest.</p>
           </div>
