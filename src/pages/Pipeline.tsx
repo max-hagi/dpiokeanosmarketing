@@ -210,7 +210,7 @@ export default function Pipeline() {
         <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
-          ) : filter(leads || []).length > 0 ? (
+          ) : filter(activeLeads).length > 0 ? (
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
