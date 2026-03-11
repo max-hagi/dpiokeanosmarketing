@@ -605,7 +605,7 @@ export default function Pipeline() {
                     variant="outline"
                     size="sm"
                     className="gap-1 text-xs text-muted-foreground hover:text-destructive"
-                    onClick={() => archiveMutation.mutate({ leadId: selectedLead.id, archive: !(selectedLead as any).is_archived })}
+                    onClick={() => archiveMutation.mutate({ leadIds: [selectedLead.id], archive: !(selectedLead as any).is_archived })}
                     disabled={archiveMutation.isPending}
                   >
                     {(selectedLead as any).is_archived
