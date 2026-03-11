@@ -49,6 +49,7 @@ const tabs = [
   { key: "conversations", label: "Conversations" },
   { key: "scoring", label: "Scoring" },
   { key: "nurture", label: "Nurture" },
+  { key: "archived", label: "Archived" },
 ];
 
 export default function Pipeline() {
