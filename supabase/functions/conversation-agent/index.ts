@@ -231,6 +231,26 @@ serve(async (req) => {
         details: { lead_id: leadId, persona_match: profileData.persona_match, preliminary_score: profileData.preliminary_scores?.total },
       });
 
+      // ─── AUTO-CHAIN: Trigger qualification automatically ───
+      try {
+        console.log(`Auto-triggering qualification for lead ${leadId}`);
+        const qualifyResp = await fetch(`${supabaseUrl}/functions/v1/qualify-lead`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ leadId }),
+        });
+        if (!qualifyResp.ok) {
+          console.error("Auto-qualify failed:", qualifyResp.status, await qualifyResp.text());
+        } else {
+          console.log(`Auto-qualification completed for lead ${leadId}`);
+        }
+      } catch (chainErr) {
+        console.error("Auto-qualify chain error:", chainErr);
+      }
+
       return new Response(JSON.stringify({ success: true, profile: profileData }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
