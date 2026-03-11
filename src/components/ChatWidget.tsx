@@ -180,9 +180,11 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
       }
 
       // Check for closing signals - server now handles extraction automatically
-      // Only detect closing on final message — NOT "personalized quote" which appears in step 12 phone request
-      const isClosing = assistantContent.includes("✅") || assistantContent.includes("all set") || 
-        assistantContent.includes("keep an eye on your inbox") || assistantContent.includes("We'll be in touch soon");
+      // Only detect closing on final message — case-insensitive matching
+      const lowerContent = assistantContent.toLowerCase();
+      const isClosing = assistantContent.includes("✅") || lowerContent.includes("all set") || 
+        lowerContent.includes("keep an eye on your inbox") || lowerContent.includes("we'll be in touch soon") ||
+        lowerContent.includes("we'll be in touch shortly");
       if (isClosing) {
         setIsDone(true);
         // Server-side auto-extraction handles the pipeline now, but call as backup
