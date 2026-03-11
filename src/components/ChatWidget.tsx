@@ -179,9 +179,14 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
         }
       }
 
-      if (assistantContent.includes("✅") || assistantContent.includes("all set")) {
+      // Check for closing signals - server now handles extraction automatically
+      const isClosing = assistantContent.includes("✅") || assistantContent.includes("all set") || 
+        assistantContent.includes("keep an eye on your inbox") || assistantContent.includes("We'll be in touch") ||
+        assistantContent.includes("personalized quote");
+      if (isClosing) {
         setIsDone(true);
-        setTimeout(() => extractProfile(), 2000);
+        // Server-side auto-extraction handles the pipeline now, but call as backup
+        setTimeout(() => extractProfile(), 3000);
       }
     } catch (e) {
       console.error("Chat error:", e);
