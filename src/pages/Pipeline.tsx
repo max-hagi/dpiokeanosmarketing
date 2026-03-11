@@ -331,9 +331,32 @@ export default function Pipeline() {
                     <td className="px-5 py-3"><ScorePill score={lead.qualification_score} /></td>
                     <td className="px-5 py-3"><LeadStageBadge stage={lead.lead_stage} /></td>
                     <td className="px-5 py-3">
-                      <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => archiveMutation.mutate({ leadId: lead.id, archive: false })} disabled={archiveMutation.isPending}>
-                        <ArchiveRestore className="h-3.5 w-3.5" /> Restore
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => archiveMutation.mutate({ leadId: lead.id, archive: false })} disabled={archiveMutation.isPending}>
+                          <ArchiveRestore className="h-3.5 w-3.5" /> Restore
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="sm" className="gap-1 text-xs text-destructive hover:text-destructive">
+                              <Trash2 className="h-3.5 w-3.5" /> Delete
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Permanently delete this lead?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will permanently delete {lead.full_name} and all associated data (conversations, scores, CRM records, follow-ups). This cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteLeadMutation.mutate(lead.id)}>
+                                Delete Forever
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </td>
                   </tr>
                 ))}
