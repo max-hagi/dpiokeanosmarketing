@@ -179,14 +179,14 @@ export default function Pipeline() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight">Pipeline</h1>
+          <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight">Pipeline</h1>
           <p className="text-muted-foreground mt-1">Unified lead profiles</p>
         </div>
         <div className="flex gap-2">
-          <Link to="/chat"><Button className="gap-2 shadow-md"><MessageSquare className="h-4 w-4" /> New Conversation</Button></Link>
-          <Button variant="outline" onClick={exportCSV} size="sm" className="gap-2"><Download className="h-4 w-4" /> CSV</Button>
+          <Link to="/chat"><Button className="gap-2 shadow-md text-sm"><MessageSquare className="h-4 w-4" /> <span className="hidden sm:inline">New Conversation</span><span className="sm:hidden">New</span></Button></Link>
+          <Button variant="outline" onClick={exportCSV} size="sm" className="gap-2"><Download className="h-4 w-4" /> <span className="hidden sm:inline">CSV</span></Button>
         </div>
       </div>
 
