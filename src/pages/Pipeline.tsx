@@ -251,10 +251,58 @@ export default function Pipeline() {
             <div className="p-16 text-center">
               <Users className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground mb-2">No leads yet.</p>
-              <Link to="/pipeline/capture"><Button variant="outline" size="sm">Start First Conversation</Button></Link>
+              <Link to="/chat"><Button variant="outline" size="sm">Start First Conversation</Button></Link>
             </div>
           )}
         </div>
+      )}
+
+      {/* TAB: Archived */}
+      {activeTab === "archived" && (
+        <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
+          {filter(archivedLeads).length > 0 ? (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  {["Name", "Archived", "Score", "Stage", ""].map(h => (
+                    <th key={h} className="text-left text-xs font-semibold text-muted-foreground px-5 py-3 uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filter(archivedLeads).map(lead => (
+                  <tr key={lead.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-5 py-3">
+                      <p className="text-sm font-medium">{lead.full_name}</p>
+                      <p className="text-xs text-muted-foreground">{lead.email}</p>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-muted-foreground">{format(new Date(lead.updated_at), "MMM d, yyyy")}</td>
+                    <td className="px-5 py-3">
+                      {lead.qualification_score != null ? (
+                        <span className="text-sm font-bold text-muted-foreground">{lead.qualification_score}/100</span>
+                      ) : <span className="text-sm text-muted-foreground">—</span>}
+                    </td>
+                    <td className="px-5 py-3"><LeadStageBadge stage={lead.lead_stage} /></td>
+                    <td className="px-5 py-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1 text-xs"
+                        onClick={() => archiveMutation.mutate({ leadId: lead.id, archive: false })}
+                        disabled={archiveMutation.isPending}
+                      >
+                        <ArchiveRestore className="h-3.5 w-3.5" /> Restore
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="p-16 text-center">
+              <Archive className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No archived leads</p>
+            </div>
       )}
 
       {/* TAB: Scoring */}
