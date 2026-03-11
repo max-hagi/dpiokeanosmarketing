@@ -273,6 +273,7 @@ export default function Pipeline() {
                 })}
               </tbody>
             </table>
+            </div>
           ) : (
             <div className="p-16 text-center">
               <Users className="h-8 w-8 text-muted-foreground mx-auto mb-3" />

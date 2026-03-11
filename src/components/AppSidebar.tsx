@@ -11,7 +11,11 @@ const navItems = [
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
 
-export default function AppSidebar() {
+interface AppSidebarProps {
+  onNavigate?: () => void;
+}
+
+export default function AppSidebar({ onNavigate }: AppSidebarProps) {
   const location = useLocation();
 
   const isActive = (to: string) => {
@@ -20,7 +24,7 @@ export default function AppSidebar() {
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border">
+    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border max-md:static max-md:h-full max-md:z-auto">
       <div className="flex items-center gap-3 px-6 py-5 border-b border-sidebar-border">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-sidebar-primary to-accent shadow-md">
           <Waves className="h-5 w-5 text-sidebar-primary-foreground" />
@@ -38,6 +42,7 @@ export default function AppSidebar() {
             <NavLink
               key={item.to}
               to={item.to}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                 active
