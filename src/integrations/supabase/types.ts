@@ -432,6 +432,7 @@ export type Database = {
           full_name: string
           id: string
           inquiry_summary: string | null
+          is_archived: boolean
           keyword_source: string | null
           lead_stage: Database["public"]["Enums"]["lead_stage"]
           lead_status: Database["public"]["Enums"]["lead_status"]
@@ -472,6 +473,7 @@ export type Database = {
           full_name: string
           id?: string
           inquiry_summary?: string | null
+          is_archived?: boolean
           keyword_source?: string | null
           lead_stage?: Database["public"]["Enums"]["lead_stage"]
           lead_status?: Database["public"]["Enums"]["lead_status"]
@@ -512,6 +514,7 @@ export type Database = {
           full_name?: string
           id?: string
           inquiry_summary?: string | null
+          is_archived?: boolean
           keyword_source?: string | null
           lead_stage?: Database["public"]["Enums"]["lead_stage"]
           lead_status?: Database["public"]["Enums"]["lead_status"]

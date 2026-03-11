@@ -30,8 +30,8 @@ const App = () => (
           <Route element={<AppLayout />}>
             <Route path="/" element={<Overview />} />
             <Route path="/pipeline" element={<Pipeline />} />
-            <Route path="/pipeline/capture" element={<LeadCapture />} />
             <Route path="/pipeline/lead/:id" element={<Pipeline />} />
+            <Route path="/chat" element={<LeadCapture />} />
             <Route path="/crm" element={<CrmPage />} />
             <Route path="/marketing" element={<Marketing />} />
             <Route path="/settings" element={<SettingsPage />} />
@@ -39,7 +39,8 @@ const App = () => (
             {/* Legacy redirects */}
             <Route path="/leads" element={<Navigate to="/pipeline" replace />} />
             <Route path="/leads/pipeline" element={<Navigate to="/pipeline" replace />} />
-            <Route path="/leads/capture" element={<Navigate to="/pipeline/capture" replace />} />
+            <Route path="/leads/capture" element={<Navigate to="/chat" replace />} />
+            <Route path="/pipeline/capture" element={<Navigate to="/chat" replace />} />
             <Route path="/leads/:id" element={<LegacyRedirect />} />
             <Route path="/crm/:id" element={<LegacyRedirect />} />
             <Route path="/create" element={<Navigate to="/marketing" replace />} />

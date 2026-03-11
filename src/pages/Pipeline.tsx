@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import {
   Search, Download, Users, User, Mail, Phone, MapPin, DollarSign, Clock,
   Sparkles, Target, AlertTriangle, Loader2, RotateCw, Eye, ArrowRight,
-  ShieldCheck, UserCheck, Brain, MessageSquare
+  ShieldCheck, UserCheck, Brain, MessageSquare, Archive, ArchiveRestore
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
@@ -49,6 +49,7 @@ const tabs = [
   { key: "conversations", label: "Conversations" },
   { key: "scoring", label: "Scoring" },
   { key: "nurture", label: "Nurture" },
+  { key: "archived", label: "Archived" },
 ];
 
 export default function Pipeline() {
@@ -57,6 +58,7 @@ export default function Pipeline() {
   const [search, setSearch] = useState("");
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const queryClient = useQueryClient();
 
   const setTab = (tab: string) => setSearchParams({ tab });
@@ -123,6 +125,22 @@ export default function Pipeline() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Scoring failed"),
   });
 
+  const archiveMutation = useMutation({
+    mutationFn: async ({ leadId, archive }: { leadId: string; archive: boolean }) => {
+      const { error } = await supabase.from("leads").update({ is_archived: archive } as any).eq("id", leadId);
+      if (error) throw error;
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      toast.success(vars.archive ? "Lead archived" : "Lead restored");
+      setSelectedLeadId(null);
+    },
+    onError: () => toast.error("Failed to update lead"),
+  });
+
+  const activeLeads = leads?.filter(l => !(l as any).is_archived) || [];
+  const archivedLeads = leads?.filter(l => (l as any).is_archived) || [];
+
   const filter = (list: any[]) => list.filter(l =>
     l.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     l.email?.toLowerCase().includes(search.toLowerCase())
@@ -147,7 +165,7 @@ export default function Pipeline() {
   };
 
   // Nurture leads: score < 50 with active sequences
-  const nurtureLeads = leads?.filter(l => (l.qualification_score ?? 0) < 50 && l.qualification_data) || [];
+  const nurtureLeads = activeLeads.filter(l => (l.qualification_score ?? 0) < 50 && l.qualification_data);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
@@ -157,7 +175,7 @@ export default function Pipeline() {
           <p className="text-muted-foreground mt-1">From conversation to qualification</p>
         </div>
         <div className="flex gap-2">
-          <Link to="/pipeline/capture"><Button className="gap-2 shadow-md"><MessageSquare className="h-4 w-4" /> New Conversation</Button></Link>
+          <Link to="/chat"><Button className="gap-2 shadow-md"><MessageSquare className="h-4 w-4" /> New Conversation</Button></Link>
           <Button variant="outline" onClick={exportCSV} size="sm" className="gap-2"><Download className="h-4 w-4" /> CSV</Button>
         </div>
       </div>
@@ -192,7 +210,7 @@ export default function Pipeline() {
         <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
-          ) : filter(leads || []).length > 0 ? (
+          ) : filter(activeLeads).length > 0 ? (
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
@@ -202,7 +220,7 @@ export default function Pipeline() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filter(leads || []).map(lead => {
+                {filter(activeLeads).map(lead => {
                   const status = getConversationStatus(lead);
                   return (
                     <tr key={lead.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setSelectedLeadId(lead.id)}>
@@ -233,7 +251,57 @@ export default function Pipeline() {
             <div className="p-16 text-center">
               <Users className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground mb-2">No leads yet.</p>
-              <Link to="/pipeline/capture"><Button variant="outline" size="sm">Start First Conversation</Button></Link>
+              <Link to="/chat"><Button variant="outline" size="sm">Start First Conversation</Button></Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* TAB: Archived */}
+      {activeTab === "archived" && (
+        <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
+          {filter(archivedLeads).length > 0 ? (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  {["Name", "Archived", "Score", "Stage", ""].map(h => (
+                    <th key={h} className="text-left text-xs font-semibold text-muted-foreground px-5 py-3 uppercase tracking-wider">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filter(archivedLeads).map(lead => (
+                  <tr key={lead.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-5 py-3">
+                      <p className="text-sm font-medium">{lead.full_name}</p>
+                      <p className="text-xs text-muted-foreground">{lead.email}</p>
+                    </td>
+                    <td className="px-5 py-3 text-sm text-muted-foreground">{format(new Date(lead.updated_at), "MMM d, yyyy")}</td>
+                    <td className="px-5 py-3">
+                      {lead.qualification_score != null ? (
+                        <span className="text-sm font-bold text-muted-foreground">{lead.qualification_score}/100</span>
+                      ) : <span className="text-sm text-muted-foreground">—</span>}
+                    </td>
+                    <td className="px-5 py-3"><LeadStageBadge stage={lead.lead_stage} /></td>
+                    <td className="px-5 py-3">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="gap-1 text-xs"
+                        onClick={() => archiveMutation.mutate({ leadId: lead.id, archive: false })}
+                        disabled={archiveMutation.isPending}
+                      >
+                        <ArchiveRestore className="h-3.5 w-3.5" /> Restore
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <div className="p-16 text-center">
+              <Archive className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No archived leads</p>
             </div>
           )}
         </div>
@@ -245,7 +313,7 @@ export default function Pipeline() {
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
           ) : (() => {
-            const scored = filter(leads?.filter(l => l.qualification_data) || []);
+            const scored = filter(activeLeads.filter(l => l.qualification_data));
             return scored.length > 0 ? (
               <table className="w-full">
                 <thead>
@@ -470,7 +538,7 @@ export default function Pipeline() {
               </div>
 
               {/* Action buttons */}
-              <div className="flex gap-2 pt-2 border-t border-border">
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
                 {!selectedLead.qualification_data && (
                   <Button size="sm" className="gap-1" onClick={() => qualifyMutation.mutate(selectedLead.id)} disabled={qualifyMutation.isPending}>
                     {qualifyMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}
@@ -489,6 +557,19 @@ export default function Pipeline() {
                     )}
                   </>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs text-muted-foreground hover:text-destructive"
+                  onClick={() => archiveMutation.mutate({ leadId: selectedLead.id, archive: !(selectedLead as any).is_archived })}
+                  disabled={archiveMutation.isPending}
+                >
+                  {(selectedLead as any).is_archived ? (
+                    <><ArchiveRestore className="h-3.5 w-3.5" /> Restore</>
+                  ) : (
+                    <><Archive className="h-3.5 w-3.5" /> Archive</>
+                  )}
+                </Button>
               </div>
             </div>
           )}
