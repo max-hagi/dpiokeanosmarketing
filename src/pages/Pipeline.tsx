@@ -538,7 +538,7 @@ export default function Pipeline() {
               </div>
 
               {/* Action buttons */}
-              <div className="flex gap-2 pt-2 border-t border-border">
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
                 {!selectedLead.qualification_data && (
                   <Button size="sm" className="gap-1" onClick={() => qualifyMutation.mutate(selectedLead.id)} disabled={qualifyMutation.isPending}>
                     {qualifyMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}
@@ -557,6 +557,19 @@ export default function Pipeline() {
                     )}
                   </>
                 )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 text-xs text-muted-foreground hover:text-destructive"
+                  onClick={() => archiveMutation.mutate({ leadId: selectedLead.id, archive: !(selectedLead as any).is_archived })}
+                  disabled={archiveMutation.isPending}
+                >
+                  {(selectedLead as any).is_archived ? (
+                    <><ArchiveRestore className="h-3.5 w-3.5" /> Restore</>
+                  ) : (
+                    <><Archive className="h-3.5 w-3.5" /> Archive</>
+                  )}
+                </Button>
               </div>
             </div>
           )}
