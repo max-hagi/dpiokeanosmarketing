@@ -3,11 +3,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Search, Download, Users, Mail, Phone, MapPin, DollarSign, Clock,
   Sparkles, Target, Loader2, RotateCw, Eye, ArrowRight,
-  ShieldCheck, UserCheck, MessageSquare, Archive, ArchiveRestore, Trash2
+  ShieldCheck, UserCheck, MessageSquare, Archive, ArchiveRestore, Trash2, X
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -72,9 +73,10 @@ export default function Pipeline() {
   const [search, setSearch] = useState("");
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const queryClient = useQueryClient();
 
-  const setTab = (tab: string) => setSearchParams({ tab });
+  const setTab = (tab: string) => { setSearchParams({ tab }); setSelected(new Set()); };
 
   const { data: leads, isLoading } = useQuery({
     queryKey: ["leads"],
@@ -141,33 +143,38 @@ export default function Pipeline() {
   });
 
   const archiveMutation = useMutation({
-    mutationFn: async ({ leadId, archive }: { leadId: string; archive: boolean }) => {
-      const { error } = await supabase.from("leads").update({ is_archived: archive } as any).eq("id", leadId);
-      if (error) throw error;
+    mutationFn: async ({ leadIds, archive }: { leadIds: string[]; archive: boolean }) => {
+      for (const leadId of leadIds) {
+        const { error } = await supabase.from("leads").update({ is_archived: archive } as any).eq("id", leadId);
+        if (error) throw error;
+      }
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
-      toast.success(vars.archive ? "Lead archived" : "Lead restored");
+      toast.success(vars.leadIds.length > 1 ? `${vars.leadIds.length} leads ${vars.archive ? "archived" : "restored"}` : vars.archive ? "Lead archived" : "Lead restored");
       setSelectedLeadId(null);
+      setSelected(new Set());
     },
     onError: () => toast.error("Failed to update lead"),
   });
 
   const deleteLeadMutation = useMutation({
-    mutationFn: async (leadId: string) => {
-      // Delete related records first
-      await supabase.from("follow_up_messages").delete().eq("lead_id", leadId);
-      await supabase.from("follow_up_sequences").delete().eq("lead_id", leadId);
-      await supabase.from("conversation_messages").delete().eq("lead_id", leadId);
-      await supabase.from("crm_records").delete().eq("lead_id", leadId);
-      const { error } = await supabase.from("leads").delete().eq("id", leadId);
-      if (error) throw error;
+    mutationFn: async (leadIds: string[]) => {
+      for (const leadId of leadIds) {
+        await supabase.from("follow_up_messages").delete().eq("lead_id", leadId);
+        await supabase.from("follow_up_sequences").delete().eq("lead_id", leadId);
+        await supabase.from("conversation_messages").delete().eq("lead_id", leadId);
+        await supabase.from("crm_records").delete().eq("lead_id", leadId);
+        const { error } = await supabase.from("leads").delete().eq("id", leadId);
+        if (error) throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_, leadIds) => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       queryClient.invalidateQueries({ queryKey: ["crm-records-all"] });
-      toast.success("Lead permanently deleted");
+      toast.success(leadIds.length > 1 ? `${leadIds.length} leads permanently deleted` : "Lead permanently deleted");
       setSelectedLeadId(null);
+      setSelected(new Set());
     },
     onError: () => toast.error("Failed to delete lead"),
   });
@@ -179,6 +186,16 @@ export default function Pipeline() {
     l.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     l.email?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const toggleSelect = (id: string) => {
+    setSelected(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  };
+  const toggleSelectAll = (items: any[]) => {
+    const ids = items.map((l: any) => l.id);
+    const allSelected = ids.every((id: string) => selected.has(id));
+    if (allSelected) { setSelected(prev => { const next = new Set(prev); ids.forEach((id: string) => next.delete(id)); return next; }); }
+    else { setSelected(prev => { const next = new Set(prev); ids.forEach((id: string) => next.add(id)); return next; }); }
+  };
 
   const exportCSV = () => {
     if (!leads) return;
@@ -250,10 +267,24 @@ export default function Pipeline() {
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
           ) : filter(activeLeads).length > 0 ? (
+            <>
+            {selected.size > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border">
+                <span className="text-sm font-medium">{selected.size} selected</span>
+                <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setSelected(new Set())}><X className="h-3.5 w-3.5" /></Button>
+                <div className="flex-1" />
+                <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => archiveMutation.mutate({ leadIds: Array.from(selected), archive: true })} disabled={archiveMutation.isPending}>
+                  <Archive className="h-3.5 w-3.5" /> Archive All
+                </Button>
+              </div>
+            )}
             <div className="overflow-x-auto">
             <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
+                  <th className="px-3 py-3 w-10">
+                    <Checkbox checked={filter(activeLeads).every(l => selected.has(l.id))} onCheckedChange={() => toggleSelectAll(filter(activeLeads))} />
+                  </th>
                   {["Name", "Date", "Score", "Routing", "Nurture", "Status", ""].map(h => (
                     <th key={h} className="text-left text-xs font-semibold text-muted-foreground px-5 py-3 uppercase tracking-wider">{h}</th>
                   ))}
@@ -270,7 +301,10 @@ export default function Pipeline() {
                     : nurture.seq ? "text-warning" : "text-muted-foreground";
 
                   return (
-                    <tr key={lead.id} className="hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => { setSelectedLeadId(lead.id); setShowTranscript(false); }}>
+                    <tr key={lead.id} className={`hover:bg-muted/30 transition-colors cursor-pointer ${selected.has(lead.id) ? "bg-primary/5" : ""}`} onClick={() => { setSelectedLeadId(lead.id); setShowTranscript(false); }}>
+                      <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                        <Checkbox checked={selected.has(lead.id)} onCheckedChange={() => toggleSelect(lead.id)} />
+                      </td>
                       <td className="px-5 py-3">
                         <p className="text-sm font-medium">{lead.full_name}</p>
                         <p className="text-xs text-muted-foreground">{lead.email}</p>
@@ -297,6 +331,7 @@ export default function Pipeline() {
               </tbody>
             </table>
             </div>
+            </>
           ) : (
             <div className="p-16 text-center">
               <Users className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
@@ -311,10 +346,43 @@ export default function Pipeline() {
       {activeTab === "archived" && (
         <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
           {filter(archivedLeads).length > 0 ? (
+            <>
+            {selected.size > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-muted/50 border-b border-border">
+                <span className="text-sm font-medium">{selected.size} selected</span>
+                <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => setSelected(new Set())}><X className="h-3.5 w-3.5" /></Button>
+                <div className="flex-1" />
+                <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => archiveMutation.mutate({ leadIds: Array.from(selected), archive: false })} disabled={archiveMutation.isPending}>
+                  <ArchiveRestore className="h-3.5 w-3.5" /> Restore All
+                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-1 text-xs text-destructive hover:text-destructive border-destructive/30">
+                      <Trash2 className="h-3.5 w-3.5" /> Delete All
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete {selected.size} leads permanently?</AlertDialogTitle>
+                      <AlertDialogDescription>This will permanently delete the selected leads and all associated data. This cannot be undone.</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteLeadMutation.mutate(Array.from(selected))}>
+                        Delete Forever
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            )}
             <div className="overflow-x-auto">
             <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
+                  <th className="px-3 py-3 w-10">
+                    <Checkbox checked={filter(archivedLeads).every(l => selected.has(l.id))} onCheckedChange={() => toggleSelectAll(filter(archivedLeads))} />
+                  </th>
                   {["Name", "Archived", "Score", "Stage", ""].map(h => (
                     <th key={h} className="text-left text-xs font-semibold text-muted-foreground px-5 py-3 uppercase tracking-wider">{h}</th>
                   ))}
@@ -322,7 +390,10 @@ export default function Pipeline() {
               </thead>
               <tbody className="divide-y divide-border">
                 {filter(archivedLeads).map(lead => (
-                  <tr key={lead.id} className="hover:bg-muted/30 transition-colors">
+                  <tr key={lead.id} className={`hover:bg-muted/30 transition-colors ${selected.has(lead.id) ? "bg-primary/5" : ""}`}>
+                    <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                      <Checkbox checked={selected.has(lead.id)} onCheckedChange={() => toggleSelect(lead.id)} />
+                    </td>
                     <td className="px-5 py-3">
                       <p className="text-sm font-medium">{lead.full_name}</p>
                       <p className="text-xs text-muted-foreground">{lead.email}</p>
@@ -332,7 +403,7 @@ export default function Pipeline() {
                     <td className="px-5 py-3"><LeadStageBadge stage={lead.lead_stage} /></td>
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => archiveMutation.mutate({ leadId: lead.id, archive: false })} disabled={archiveMutation.isPending}>
+                        <Button variant="ghost" size="sm" className="gap-1 text-xs" onClick={() => archiveMutation.mutate({ leadIds: [lead.id], archive: false })} disabled={archiveMutation.isPending}>
                           <ArchiveRestore className="h-3.5 w-3.5" /> Restore
                         </Button>
                         <AlertDialog>
@@ -345,12 +416,12 @@ export default function Pipeline() {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Permanently delete this lead?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                This will permanently delete {lead.full_name} and all associated data (conversations, scores, CRM records, follow-ups). This cannot be undone.
+                                This will permanently delete {lead.full_name} and all associated data. This cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteLeadMutation.mutate(lead.id)}>
+                              <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => deleteLeadMutation.mutate([lead.id])}>
                                 Delete Forever
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -363,6 +434,7 @@ export default function Pipeline() {
               </tbody>
             </table>
             </div>
+            </>
           ) : (
             <div className="p-16 text-center">
               <Archive className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
@@ -533,7 +605,7 @@ export default function Pipeline() {
                     variant="outline"
                     size="sm"
                     className="gap-1 text-xs text-muted-foreground hover:text-destructive"
-                    onClick={() => archiveMutation.mutate({ leadId: selectedLead.id, archive: !(selectedLead as any).is_archived })}
+                    onClick={() => archiveMutation.mutate({ leadIds: [selectedLead.id], archive: !(selectedLead as any).is_archived })}
                     disabled={archiveMutation.isPending}
                   >
                     {(selectedLead as any).is_archived
