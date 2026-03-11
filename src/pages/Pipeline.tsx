@@ -179,14 +179,14 @@ export default function Pipeline() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="font-heading text-3xl font-bold tracking-tight">Pipeline</h1>
+          <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight">Pipeline</h1>
           <p className="text-muted-foreground mt-1">Unified lead profiles</p>
         </div>
         <div className="flex gap-2">
-          <Link to="/chat"><Button className="gap-2 shadow-md"><MessageSquare className="h-4 w-4" /> New Conversation</Button></Link>
-          <Button variant="outline" onClick={exportCSV} size="sm" className="gap-2"><Download className="h-4 w-4" /> CSV</Button>
+          <Link to="/chat"><Button className="gap-2 shadow-md text-sm"><MessageSquare className="h-4 w-4" /> <span className="hidden sm:inline">New Conversation</span><span className="sm:hidden">New</span></Button></Link>
+          <Button variant="outline" onClick={exportCSV} size="sm" className="gap-2"><Download className="h-4 w-4" /> <span className="hidden sm:inline">CSV</span></Button>
         </div>
       </div>
 
@@ -223,11 +223,12 @@ export default function Pipeline() {
 
       {/* TAB: Leads (unified) */}
       {activeTab === "leads" && (
-        <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
+          <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
           ) : filter(activeLeads).length > 0 ? (
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[700px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   {["Name", "Date", "Score", "Routing", "Nurture", "Status", ""].map(h => (
@@ -272,6 +273,7 @@ export default function Pipeline() {
                 })}
               </tbody>
             </table>
+            </div>
           ) : (
             <div className="p-16 text-center">
               <Users className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
@@ -286,7 +288,8 @@ export default function Pipeline() {
       {activeTab === "archived" && (
         <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
           {filter(archivedLeads).length > 0 ? (
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   {["Name", "Archived", "Score", "Stage", ""].map(h => (
@@ -313,6 +316,7 @@ export default function Pipeline() {
                 ))}
               </tbody>
             </table>
+            </div>
           ) : (
             <div className="p-16 text-center">
               <Archive className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
