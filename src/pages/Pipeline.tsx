@@ -175,7 +175,7 @@ export default function Pipeline() {
           <p className="text-muted-foreground mt-1">From conversation to qualification</p>
         </div>
         <div className="flex gap-2">
-          <Link to="/pipeline/capture"><Button className="gap-2 shadow-md"><MessageSquare className="h-4 w-4" /> New Conversation</Button></Link>
+          <Link to="/chat"><Button className="gap-2 shadow-md"><MessageSquare className="h-4 w-4" /> New Conversation</Button></Link>
           <Button variant="outline" onClick={exportCSV} size="sm" className="gap-2"><Download className="h-4 w-4" /> CSV</Button>
         </div>
       </div>
