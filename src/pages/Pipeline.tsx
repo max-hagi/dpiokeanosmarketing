@@ -79,6 +79,7 @@ export default function Pipeline() {
       if (error) throw error;
       return data;
     },
+    refetchInterval: 8000, // Auto-refresh to catch pipeline updates
   });
 
   const { data: crmRecords } = useQuery({
