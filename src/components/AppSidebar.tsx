@@ -1,4 +1,4 @@
-import { LayoutDashboard, Target, Users, Palette, Settings, Waves } from "lucide-react";
+import { LayoutDashboard, Target, Users, Palette, Settings, Waves, MessageSquare } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
