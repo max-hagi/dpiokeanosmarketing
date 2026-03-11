@@ -187,6 +187,16 @@ export default function Pipeline() {
     l.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const toggleSelect = (id: string) => {
+    setSelected(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
+  };
+  const toggleSelectAll = (items: any[]) => {
+    const ids = items.map((l: any) => l.id);
+    const allSelected = ids.every((id: string) => selected.has(id));
+    if (allSelected) { setSelected(prev => { const next = new Set(prev); ids.forEach((id: string) => next.delete(id)); return next; }); }
+    else { setSelected(prev => { const next = new Set(prev); ids.forEach((id: string) => next.add(id)); return next; }); }
+  };
+
   const exportCSV = () => {
     if (!leads) return;
     const headers = ["Date", "Name", "Email", "Location", "Score", "Stage", "Status"];
