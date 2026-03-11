@@ -136,7 +136,7 @@ export default function Overview() {
           <h2 className="font-heading text-lg font-semibold tracking-tight">Today's Action Items</h2>
         </div>
         <div className="overflow-x-auto">
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-border min-w-[600px]">
             {actionItems.slice(0, 10).map((item, i) => {
               const p = priorityConfig[item.priority];
               return (
