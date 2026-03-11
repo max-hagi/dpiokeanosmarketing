@@ -91,7 +91,9 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
           step_number: m.step_number ?? undefined,
         })));
         const lastMsg = data[data.length - 1];
-        if (lastMsg.content.includes("✅") || lastMsg.content.includes("all set")) {
+        const lastLower = lastMsg.content.toLowerCase();
+        if (lastMsg.content.includes("✅") || lastLower.includes("all set") || 
+            lastLower.includes("keep an eye on your inbox") || lastLower.includes("we'll be in touch")) {
           setIsDone(true);
         }
       } else {
