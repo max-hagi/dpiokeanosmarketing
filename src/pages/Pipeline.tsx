@@ -3,11 +3,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   Search, Download, Users, Mail, Phone, MapPin, DollarSign, Clock,
   Sparkles, Target, Loader2, RotateCw, Eye, ArrowRight,
-  ShieldCheck, UserCheck, MessageSquare, Archive, ArchiveRestore, Trash2
+  ShieldCheck, UserCheck, MessageSquare, Archive, ArchiveRestore, Trash2, X
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
