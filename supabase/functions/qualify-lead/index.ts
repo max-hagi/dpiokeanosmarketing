@@ -343,6 +343,26 @@ MISSING FIELDS: ${JSON.stringify(lead.missing_fields || [])}`,
       },
     });
 
+    // ─── AUTO-CHAIN: Trigger CRM action agent automatically ───
+    try {
+      console.log(`Auto-triggering CRM action for lead ${leadId}`);
+      const crmResp = await fetch(`${supabaseUrl}/functions/v1/crm-action-agent`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({ leadId }),
+      });
+      if (!crmResp.ok) {
+        console.error("Auto-CRM failed:", crmResp.status, await crmResp.text());
+      } else {
+        console.log(`Auto-CRM completed for lead ${leadId}`);
+      }
+    } catch (chainErr) {
+      console.error("Auto-CRM chain error:", chainErr);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

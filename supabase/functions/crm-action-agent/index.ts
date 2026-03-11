@@ -331,6 +331,37 @@ WHAT THE SALES TEAM SHOULD DO:
       },
     });
 
+    // ─── AUTO-CHAIN: Trigger follow-up agent automatically ───
+    try {
+      // Check if a sequence already exists for this lead
+      const { data: existingSeq } = await supabase
+        .from("follow_up_sequences")
+        .select("id")
+        .eq("lead_id", leadId)
+        .maybeSingle();
+
+      if (!existingSeq) {
+        console.log(`Auto-triggering follow-up sequence (type ${sequenceType}) for lead ${leadId}`);
+        const followUpResp = await fetch(`${supabaseUrl}/functions/v1/follow-up-agent`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ leadId, sequenceType, crmRecordId: crmRecord.id }),
+        });
+        if (!followUpResp.ok) {
+          console.error("Auto-follow-up failed:", followUpResp.status, await followUpResp.text());
+        } else {
+          console.log(`Auto-follow-up completed for lead ${leadId}`);
+        }
+      } else {
+        console.log(`Follow-up sequence already exists for lead ${leadId}, skipping.`);
+      }
+    } catch (chainErr) {
+      console.error("Auto-follow-up chain error:", chainErr);
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
