@@ -165,7 +165,7 @@ export default function Pipeline() {
   };
 
   // Nurture leads: score < 50 with active sequences
-  const nurtureLeads = leads?.filter(l => (l.qualification_score ?? 0) < 50 && l.qualification_data) || [];
+  const nurtureLeads = activeLeads.filter(l => (l.qualification_score ?? 0) < 50 && l.qualification_data);
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 animate-fade-in">
