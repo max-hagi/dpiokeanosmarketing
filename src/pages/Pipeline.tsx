@@ -153,6 +153,25 @@ export default function Pipeline() {
     onError: () => toast.error("Failed to update lead"),
   });
 
+  const deleteLeadMutation = useMutation({
+    mutationFn: async (leadId: string) => {
+      // Delete related records first
+      await supabase.from("follow_up_messages").delete().eq("lead_id", leadId);
+      await supabase.from("follow_up_sequences").delete().eq("lead_id", leadId);
+      await supabase.from("conversation_messages").delete().eq("lead_id", leadId);
+      await supabase.from("crm_records").delete().eq("lead_id", leadId);
+      const { error } = await supabase.from("leads").delete().eq("id", leadId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-records-all"] });
+      toast.success("Lead permanently deleted");
+      setSelectedLeadId(null);
+    },
+    onError: () => toast.error("Failed to delete lead"),
+  });
+
   const activeLeads = leads?.filter(l => !(l as any).is_archived) || [];
   const archivedLeads = leads?.filter(l => (l as any).is_archived) || [];
 
