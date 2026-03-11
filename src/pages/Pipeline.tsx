@@ -58,6 +58,7 @@ export default function Pipeline() {
   const [search, setSearch] = useState("");
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   const queryClient = useQueryClient();
 
   const setTab = (tab: string) => setSearchParams({ tab });
