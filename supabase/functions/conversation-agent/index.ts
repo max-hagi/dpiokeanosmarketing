@@ -465,11 +465,13 @@ RULES:
             await supabase.from("leads").update({ conversation_status: "in_progress" }).eq("id", leadId);
           }
 
-          // AUTO-EXTRACT: If we've reached step 12+ or closing signals detected, auto-trigger extraction
+          // AUTO-EXTRACT: Only after step 13 (closing) — user must have answered 12+ questions
+          // or explicit closing signals in the FINAL message (case-insensitive)
           const totalUserMessages = allMessages.filter(m => m.role === "user").length;
-          const isClosingMessage = fullContent.includes("✅") || fullContent.includes("all set") || 
-            fullContent.includes("keep an eye on your inbox") || fullContent.includes("We'll be in touch") ||
-            fullContent.includes("personalized quote") || totalUserMessages >= 11;
+          const lowerContent = fullContent.toLowerCase();
+          const isClosingMessage = fullContent.includes("✅") || lowerContent.includes("all set") || 
+            lowerContent.includes("keep an eye on your inbox") || lowerContent.includes("we'll be in touch soon") ||
+            lowerContent.includes("we'll be in touch shortly") || totalUserMessages >= 12;
           
           if (isClosingMessage && lead.conversation_status !== "complete") {
             console.log(`Auto-extracting profile for lead ${leadId} (step ${assistantStep}, userMsgs: ${totalUserMessages})`);

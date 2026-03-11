@@ -91,7 +91,9 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
           step_number: m.step_number ?? undefined,
         })));
         const lastMsg = data[data.length - 1];
-        if (lastMsg.content.includes("✅") || lastMsg.content.includes("all set")) {
+        const lastLower = lastMsg.content.toLowerCase();
+        if (lastMsg.content.includes("✅") || lastLower.includes("all set") || 
+            lastLower.includes("keep an eye on your inbox") || lastLower.includes("we'll be in touch")) {
           setIsDone(true);
         }
       } else {
@@ -180,9 +182,11 @@ export default function ChatWidget({ leadId, leadName, onComplete }: ChatWidgetP
       }
 
       // Check for closing signals - server now handles extraction automatically
-      const isClosing = assistantContent.includes("✅") || assistantContent.includes("all set") || 
-        assistantContent.includes("keep an eye on your inbox") || assistantContent.includes("We'll be in touch") ||
-        assistantContent.includes("personalized quote");
+      // Only detect closing on final message — case-insensitive matching
+      const lowerContent = assistantContent.toLowerCase();
+      const isClosing = assistantContent.includes("✅") || lowerContent.includes("all set") || 
+        lowerContent.includes("keep an eye on your inbox") || lowerContent.includes("we'll be in touch soon") ||
+        lowerContent.includes("we'll be in touch shortly");
       if (isClosing) {
         setIsDone(true);
         // Server-side auto-extraction handles the pipeline now, but call as backup
