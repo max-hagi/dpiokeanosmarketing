@@ -313,7 +313,7 @@ export default function Pipeline() {
           {isLoading ? (
             <div className="p-8 text-center text-muted-foreground">Loading...</div>
           ) : (() => {
-            const scored = filter(leads?.filter(l => l.qualification_data) || []);
+            const scored = filter(activeLeads.filter(l => l.qualification_data));
             return scored.length > 0 ? (
               <table className="w-full">
                 <thead>
