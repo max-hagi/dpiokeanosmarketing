@@ -303,6 +303,8 @@ export default function Pipeline() {
               <Archive className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground">No archived leads</p>
             </div>
+          )}
+        </div>
       )}
 
       {/* TAB: Scoring */}
