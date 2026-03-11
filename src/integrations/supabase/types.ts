@@ -62,6 +62,7 @@ export type Database = {
           content_type: Database["public"]["Enums"]["content_type"]
           created_at: string
           id: string
+          is_archived: boolean
           prompt: string
           status: Database["public"]["Enums"]["content_status"]
           target_audience: string | null
@@ -72,6 +73,7 @@ export type Database = {
           content_type?: Database["public"]["Enums"]["content_type"]
           created_at?: string
           id?: string
+          is_archived?: boolean
           prompt: string
           status?: Database["public"]["Enums"]["content_status"]
           target_audience?: string | null
@@ -82,6 +84,7 @@ export type Database = {
           content_type?: Database["public"]["Enums"]["content_type"]
           created_at?: string
           id?: string
+          is_archived?: boolean
           prompt?: string
           status?: Database["public"]["Enums"]["content_status"]
           target_audience?: string | null
