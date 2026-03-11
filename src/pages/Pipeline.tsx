@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import {
   Search, Download, Users, User, Mail, Phone, MapPin, DollarSign, Clock,
   Sparkles, Target, AlertTriangle, Loader2, RotateCw, Eye, ArrowRight,
-  ShieldCheck, UserCheck, Brain, MessageSquare
+  ShieldCheck, UserCheck, Brain, MessageSquare, Archive, ArchiveRestore
 } from "lucide-react";
 import { format, formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
