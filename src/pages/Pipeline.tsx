@@ -47,10 +47,12 @@ function ScorePill({ score }: { score: number | null }) {
   return <span className={`text-sm font-bold ${color}`}>{score}/100</span>;
 }
 
-function ConversationStatusPill({ lead }: { lead: any }) {
-  if (lead.conversation_status === "complete") return <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase bg-success/10 text-success">Complete</span>;
-  if (lead.conversation_status === "in_progress") return <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase bg-warning/10 text-warning">In Progress</span>;
-  if (lead.qualification_data) return <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase bg-primary/10 text-primary">Scored</span>;
+function ConversationStatusPill({ lead, hasCrm }: { lead: any; hasCrm?: boolean }) {
+  if (hasCrm) return <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase bg-success/10 text-success">In CRM</span>;
+  if (lead.qualification_data && lead.routing_action) return <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase bg-primary/10 text-primary">Routed</span>;
+  if (lead.qualification_data) return <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase bg-accent/10 text-accent">Scored</span>;
+  if (lead.conversation_status === "complete") return <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase bg-warning/10 text-warning">Processing...</span>;
+  if (lead.conversation_status === "in_progress") return <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase bg-warning/10 text-warning">Chatting</span>;
   return <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase bg-muted text-muted-foreground">New</span>;
 }
 
