@@ -327,7 +327,7 @@ export default function Pipeline() {
               <SheetHeader className="pb-4">
                 <SheetTitle className="font-heading text-xl">{selectedLead.full_name}</SheetTitle>
                 <div className="flex items-center gap-2 pt-1">
-                  <ConversationStatusPill lead={selectedLead} />
+                  <ConversationStatusPill lead={selectedLead} hasCrm={!!selectedCrm} />
                   <LeadStageBadge stage={selectedLead.lead_stage} />
                 </div>
               </SheetHeader>
