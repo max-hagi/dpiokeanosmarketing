@@ -453,7 +453,7 @@ RULES:
       } finally {
         await writer.close();
         
-        // Save assistant message to DB
+      // Save assistant message to DB
         if (fullContent) {
           const assistantStep = allMessages.filter(m => m.role === "assistant").length + 1;
           await supabase.from("conversation_messages").insert({
@@ -463,6 +463,146 @@ RULES:
           // Update conversation status
           if (lead.conversation_status === "not_started") {
             await supabase.from("leads").update({ conversation_status: "in_progress" }).eq("id", leadId);
+          }
+
+          // AUTO-EXTRACT: If we've reached step 12+ or closing signals detected, auto-trigger extraction
+          const totalUserMessages = allMessages.filter(m => m.role === "user").length;
+          const isClosingMessage = fullContent.includes("✅") || fullContent.includes("all set") || 
+            fullContent.includes("keep an eye on your inbox") || fullContent.includes("We'll be in touch") ||
+            fullContent.includes("personalized quote") || totalUserMessages >= 11;
+          
+          if (isClosingMessage && lead.conversation_status !== "complete") {
+            console.log(`Auto-extracting profile for lead ${leadId} (step ${assistantStep}, userMsgs: ${totalUserMessages})`);
+            try {
+              // Mark complete first
+              await supabase.from("leads").update({ conversation_status: "extracting" }).eq("id", leadId);
+              
+              // Run extraction inline (same logic as action === "extract")
+              const convMessages = [...allMessages, { role: "assistant", content: fullContent }];
+              const conversationText = convMessages.map(m => `${m.role === 'assistant' ? 'Kai' : 'Customer'}: ${m.content}`).join("\n\n");
+
+              const extractResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${LOVABLE_API_KEY}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  model: "google/gemini-2.5-flash",
+                  messages: [
+                    { role: "system", content: EXTRACTION_PROMPT },
+                    { role: "user", content: `LEAD INFO:\nName: ${lead.full_name}\nEmail: ${lead.email}\n\nFULL CONVERSATION:\n${conversationText}` },
+                  ],
+                  tools: [{
+                    type: "function",
+                    function: {
+                      name: "extract_lead_profile",
+                      description: "Extract structured lead profile from conversation",
+                      parameters: {
+                        type: "object",
+                        properties: {
+                          phone: { type: "string", description: "Phone number if mentioned" },
+                          location: { type: "string", description: "City/area in Ontario" },
+                          in_service_area: { type: "string", enum: ["yes", "possibly", "no"] },
+                          backyard_access: { type: "string", enum: ["7ft_plus", "unsure", "restricted"] },
+                          budget_range: { type: "string", description: "Stated budget or 'not_shared'" },
+                          budget_aligned: { type: "string", enum: ["yes", "unsure", "no"] },
+                          budget_enum: { type: "string", enum: ["under_30k", "30k_50k", "50k_80k", "80k_plus"] },
+                          timeline: { type: "string", enum: ["asap", "within_3_months", "3_6_months", "6_12_months", "12_plus_months"] },
+                          pool_vision: { type: "string" },
+                          must_haves: { type: "string" },
+                          trigger: { type: "string" },
+                          main_fear: { type: "string" },
+                          decision_maker: { type: "string", enum: ["yes", "shared", "no"] },
+                          source: { type: "string", enum: ["google", "social_media", "word_of_mouth", "other"] },
+                          lead_type: { type: "string", enum: ["homeowner", "landscaper", "builder", "unknown"] },
+                          persona_match: { type: "string", enum: ["john_homeowner", "sarah_james_patel", "mike_turner", "amanda_mark_johnson", "jessica_daniel_wong", "chris_miller", "ryan_thompson"] },
+                          engagement_level: { type: "string", enum: ["high", "medium", "low"] },
+                          missing_info: { type: "array", items: { type: "string" } },
+                          conversation_summary: { type: "string" },
+                          preliminary_scores: {
+                            type: "object",
+                            properties: {
+                              location: { type: "number" },
+                              budget: { type: "number" },
+                              timeline: { type: "number" },
+                              project_fit: { type: "number" },
+                              lead_quality: { type: "number" },
+                              total: { type: "number" },
+                              estimate: { type: "string", enum: ["high", "medium", "low"] }
+                            },
+                            required: ["location", "budget", "timeline", "project_fit", "lead_quality", "total", "estimate"]
+                          }
+                        },
+                        required: ["location", "lead_type", "persona_match", "engagement_level", "missing_info", "conversation_summary", "preliminary_scores"],
+                        additionalProperties: false,
+                      },
+                    },
+                  }],
+                  tool_choice: { type: "function", function: { name: "extract_lead_profile" } },
+                }),
+              });
+
+              let profileData: any = {};
+              if (extractResponse.ok) {
+                const extractData = await extractResponse.json();
+                const toolCall = extractData.choices?.[0]?.message?.tool_calls?.[0];
+                if (toolCall?.function?.arguments) {
+                  try { profileData = JSON.parse(toolCall.function.arguments); } catch { /* fallback */ }
+                }
+              }
+
+              // Update lead with extracted data
+              const updates: any = {
+                conversation_data: profileData,
+                conversation_status: "complete",
+                persona_match: profileData.persona_match || null,
+                inquiry_summary: profileData.conversation_summary || lead.inquiry_summary,
+              };
+              if (profileData.location && !lead.location) updates.location = profileData.location;
+              if (profileData.phone && !lead.phone) updates.phone = profileData.phone;
+              if (profileData.budget_enum && !lead.budget) updates.budget = profileData.budget_enum;
+              if (profileData.timeline && !lead.timeline) updates.timeline = profileData.timeline;
+              if (profileData.source && !lead.source) updates.source = profileData.source;
+              if (profileData.engagement_level) {
+                const engMap: Record<string, number> = { high: 85, medium: 60, low: 30 };
+                updates.engagement_score = engMap[profileData.engagement_level] || 50;
+              }
+              if (profileData.budget_aligned === "yes" && (profileData.timeline === "asap" || profileData.timeline === "within_3_months")) {
+                updates.customer_segment = "high_value";
+              } else if (profileData.budget_enum || profileData.timeline) {
+                updates.customer_segment = "warm";
+              }
+              if (profileData.missing_info?.length) {
+                updates.missing_fields = profileData.missing_info;
+                updates.lead_status = "incomplete";
+              } else {
+                updates.lead_status = "complete";
+                updates.missing_fields = [];
+              }
+
+              await supabase.from("leads").update(updates).eq("id", leadId);
+              console.log(`Extraction complete for lead ${leadId}, triggering qualification...`);
+
+              // Chain to qualification
+              const qualifyResp = await fetch(`${supabaseUrl}/functions/v1/qualify-lead`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${supabaseKey}`,
+                },
+                body: JSON.stringify({ leadId }),
+              });
+              if (!qualifyResp.ok) {
+                console.error("Auto-qualify failed:", qualifyResp.status, await qualifyResp.text());
+              } else {
+                console.log(`Full pipeline completed for lead ${leadId}`);
+              }
+            } catch (extractErr) {
+              console.error("Auto-extraction error:", extractErr);
+              // Fallback: mark as complete so it can be manually processed
+              await supabase.from("leads").update({ conversation_status: "complete" }).eq("id", leadId);
+            }
           }
         }
       }
