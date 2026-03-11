@@ -143,33 +143,38 @@ export default function Pipeline() {
   });
 
   const archiveMutation = useMutation({
-    mutationFn: async ({ leadId, archive }: { leadId: string; archive: boolean }) => {
-      const { error } = await supabase.from("leads").update({ is_archived: archive } as any).eq("id", leadId);
-      if (error) throw error;
+    mutationFn: async ({ leadIds, archive }: { leadIds: string[]; archive: boolean }) => {
+      for (const leadId of leadIds) {
+        const { error } = await supabase.from("leads").update({ is_archived: archive } as any).eq("id", leadId);
+        if (error) throw error;
+      }
     },
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
-      toast.success(vars.archive ? "Lead archived" : "Lead restored");
+      toast.success(vars.leadIds.length > 1 ? `${vars.leadIds.length} leads ${vars.archive ? "archived" : "restored"}` : vars.archive ? "Lead archived" : "Lead restored");
       setSelectedLeadId(null);
+      setSelected(new Set());
     },
     onError: () => toast.error("Failed to update lead"),
   });
 
   const deleteLeadMutation = useMutation({
-    mutationFn: async (leadId: string) => {
-      // Delete related records first
-      await supabase.from("follow_up_messages").delete().eq("lead_id", leadId);
-      await supabase.from("follow_up_sequences").delete().eq("lead_id", leadId);
-      await supabase.from("conversation_messages").delete().eq("lead_id", leadId);
-      await supabase.from("crm_records").delete().eq("lead_id", leadId);
-      const { error } = await supabase.from("leads").delete().eq("id", leadId);
-      if (error) throw error;
+    mutationFn: async (leadIds: string[]) => {
+      for (const leadId of leadIds) {
+        await supabase.from("follow_up_messages").delete().eq("lead_id", leadId);
+        await supabase.from("follow_up_sequences").delete().eq("lead_id", leadId);
+        await supabase.from("conversation_messages").delete().eq("lead_id", leadId);
+        await supabase.from("crm_records").delete().eq("lead_id", leadId);
+        const { error } = await supabase.from("leads").delete().eq("id", leadId);
+        if (error) throw error;
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_, leadIds) => {
       queryClient.invalidateQueries({ queryKey: ["leads"] });
       queryClient.invalidateQueries({ queryKey: ["crm-records-all"] });
-      toast.success("Lead permanently deleted");
+      toast.success(leadIds.length > 1 ? `${leadIds.length} leads permanently deleted` : "Lead permanently deleted");
       setSelectedLeadId(null);
+      setSelected(new Set());
     },
     onError: () => toast.error("Failed to delete lead"),
   });
