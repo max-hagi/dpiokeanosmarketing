@@ -156,7 +156,7 @@ export default function Overview() {
               );
             })}
           </div>
-        ) : (
+          </div>
           <div className="p-10 text-center">
             <p className="text-muted-foreground">✅ You're all caught up. The system is handling the rest.</p>
           </div>

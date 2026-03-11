@@ -288,7 +288,8 @@ export default function Pipeline() {
       {activeTab === "archived" && (
         <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
           {filter(archivedLeads).length > 0 ? (
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[600px]">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
                   {["Name", "Archived", "Score", "Stage", ""].map(h => (
@@ -315,6 +316,7 @@ export default function Pipeline() {
                 ))}
               </tbody>
             </table>
+            </div>
           ) : (
             <div className="p-16 text-center">
               <Archive className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
