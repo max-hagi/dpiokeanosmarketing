@@ -7,74 +7,78 @@ interface QuickRepliesProps {
   disabled?: boolean;
 }
 
-// Determine quick replies based on the last assistant message content
+// Determine quick replies based on step number (derived from user message count)
 export function getQuickReplies(userMessageCount: number, lastAssistantMessage: string): string[] {
   const lower = lastAssistantMessage.toLowerCase();
-  
-  // Don't show suggestions if there's no assistant message yet
+
   if (!lastAssistantMessage) return [];
 
-  // Step 1: Ready to start?
-  if (lower.includes("ready") || lower.includes("get started") || lower.includes("shall we")) {
+  // Step 1: Opening — "Ready to get started?"
+  if (userMessageCount === 0) {
     return ["Let's do it! 🏊", "Sounds good!", "Ready when you are"];
   }
 
   // Step 2: Homeowner or contractor?
-  if ((lower.includes("homeowner") && lower.includes("contractor")) || lower.includes("landscaper")) {
-    return ["I'm a homeowner", "I'm a contractor"];
+  if (userMessageCount === 1 && (lower.includes("homeowner") || lower.includes("contractor") || lower.includes("landscaper") || lower.includes("project"))) {
+    return ["I'm a homeowner 🏠", "I'm a contractor / landscaper"];
   }
 
-  // Step 3: Location — what city/area
-  if (lower.includes("city") || lower.includes("area") || lower.includes("where in ontario") || lower.includes("located")) {
-    return ["Toronto area", "Brampton", "Mississauga", "Somewhere else"];
+  // Step 3: Location
+  if (userMessageCount === 2 && (lower.includes("city") || lower.includes("area") || lower.includes("ontario") || lower.includes("located") || lower.includes("where"))) {
+    return ["Toronto / GTA", "Brampton / Mississauga", "Hamilton / Burlington", "Somewhere else in Ontario"];
   }
 
   // Step 4: Backyard access
-  if (lower.includes("backyard") || lower.includes("truck") || lower.includes("access")) {
-    return ["Yes, plenty of room", "It's a tight squeeze", "I'm not sure"];
+  if (lower.includes("backyard") || lower.includes("truck") || lower.includes("access") || lower.includes("side of the house")) {
+    return ["Yes, plenty of room 👍", "It's a tight squeeze", "I'm not sure — can you check?"];
   }
 
   // Step 5: Timeline
-  if (lower.includes("hoping to have") || lower.includes("when are you") || lower.includes("timeline") || lower.includes("pool ready")) {
-    return ["As soon as possible!", "This summer ☀️", "Sometime next year", "Just exploring"];
+  if (lower.includes("hoping to have") || lower.includes("when are you") || lower.includes("timeline") || lower.includes("pool ready") || lower.includes("looking to get")) {
+    return ["As soon as possible! ☀️", "This summer", "Planning for next year", "Just exploring options"];
   }
 
-  // Step 6: Budget
-  if (lower.includes("budget") || lower.includes("$45,000") || lower.includes("invest") || lower.includes("spend")) {
-    return ["Under $30K", "Around $30–50K", "$50–80K", "Still figuring it out"];
+  // Step 6: Budget — anchored to Okeanos pricing
+  if (lower.includes("budget") || lower.includes("$45,000") || lower.includes("invest") || lower.includes("spend") || lower.includes("price")) {
+    return ["Under $30K — keeping it lean", "$30–50K range", "$50–80K — full package", "Still figuring that out"];
   }
 
   // Step 7: Vision / pool dreams
-  if (lower.includes("vision") || lower.includes("dream") || lower.includes("shape") || lower.includes("size") || lower.includes("features")) {
-    return ["Something classic & simple", "Fun for the whole family", "Lap pool for fitness"];
+  if (lower.includes("vision") || lower.includes("dream") || lower.includes("shape") || lower.includes("size") || lower.includes("features") || lower.includes("picture")) {
+    return ["Something classic & simple", "Family fun pool with a slide 🎉", "Lap pool for exercise", "I'd love some ideas!"];
   }
 
-  // Step 8: Trigger — what pushed you
-  if (lower.includes("someday") || lower.includes("pushed") || lower.includes("what made you") || lower.includes("looking at now")) {
-    return ["The kids are growing up", "We finally saved enough", "Neighbour got one 😄"];
+  // Step 8: What pushed you — trigger question
+  if (lower.includes("someday") || lower.includes("pushed") || lower.includes("what made you") || lower.includes("looking at now") || lower.includes("why now")) {
+    return ["The kids are growing up fast", "We finally saved enough 💰", "Neighbour got one and we're jealous 😄", "It's just been a long-time dream"];
   }
 
-  // Step 9: Concerns
-  if (lower.includes("worried") || lower.includes("concern") || lower.includes("stories") || lower.includes("not-so-great")) {
-    return ["Hidden costs 😬", "Delays / timeline", "Quality of work", "Nothing specific!"];
+  // Step 9: Concerns — not-so-great stories
+  if (lower.includes("worried") || lower.includes("concern") || lower.includes("stories") || lower.includes("not-so-great") || lower.includes("afraid")) {
+    return ["Hidden costs worry me 😬", "Delays & timeline issues", "Quality of the work", "Honestly, nothing specific!"];
   }
 
   // Step 10: Decision maker
-  if (lower.includes("decision") || lower.includes("final call") || lower.includes("partner") || lower.includes("spouse")) {
-    return ["Just me!", "My partner and I decide together", "Need to chat with my spouse"];
+  if (lower.includes("decision") || lower.includes("final call") || lower.includes("partner") || lower.includes("spouse") || lower.includes("making the call")) {
+    return ["Just me — I'm the boss 😎", "My partner and I decide together", "Need to check with my spouse first"];
   }
 
-  // Step 11: Source — how did you hear about us
-  if (lower.includes("hear about") || lower.includes("find us") || lower.includes("how did you")) {
-    return ["Google", "Instagram / Facebook", "A friend told me", "Other"];
+  // Step 11: How did you hear about us
+  if (lower.includes("hear about") || lower.includes("find us") || lower.includes("how did you") || lower.includes("last one")) {
+    return ["Found you on Google 🔍", "Saw you on Instagram / Facebook", "A friend recommended you", "Something else"];
   }
 
   // Step 12: Phone number
-  if (lower.includes("phone") || lower.includes("best number") || lower.includes("reach you") || lower.includes("call you")) {
-    return ["I'll type my number", "Email works best for me"];
+  if (lower.includes("phone") || lower.includes("best number") || lower.includes("reach you") || lower.includes("call you") || lower.includes("follow up")) {
+    return ["I'll type my number now 📱", "Email is best for me"];
   }
 
-  // Generic fallback — don't show stale suggestions
+  // Step 13: Closing — no suggestions needed
+  if (lower.includes("keep an eye") || lower.includes("inbox") || lower.includes("all set") || lower.includes("✅")) {
+    return [];
+  }
+
+  // Fallback — don't show stale suggestions
   return [];
 }
 
