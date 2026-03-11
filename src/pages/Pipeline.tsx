@@ -262,7 +262,7 @@ export default function Pipeline() {
                       <td className="px-5 py-3">
                         <span className={`text-xs font-medium ${nurtureColor}`}>{nurtureLabel}</span>
                       </td>
-                      <td className="px-5 py-3"><ConversationStatusPill lead={lead} /></td>
+                      <td className="px-5 py-3"><ConversationStatusPill lead={lead} hasCrm={!!crmRecords?.find(r => r.lead_id === lead.id)} /></td>
                       <td className="px-5 py-3"><ArrowRight className="h-4 w-4 text-muted-foreground" /></td>
                     </tr>
                   );
