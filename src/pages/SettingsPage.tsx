@@ -85,10 +85,10 @@ function humanizeDetail(action: string, details: any): string {
 
   if (action === "follow_up_sequence_created") {
     const seqLabels: Record<string, string> = {
-      A: "Qualified Lead",
-      B: "Nurture",
-      C: "Budget Recovery",
-      D: "Location Recovery",
+      A: "Qualified Outreach",
+      B: "Nurture — General",
+      C: "Nurture — Budget",
+      D: "Nurture — Location",
     };
     const seqName = seqLabels[d.sequence_type] || `Sequence ${d.sequence_type}`;
     return `${seqName} sequence — ${d.message_count || "?"} emails scheduled`;
