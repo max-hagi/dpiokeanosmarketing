@@ -374,7 +374,15 @@ export default function SettingsPage() {
                 <p className="text-sm font-medium">Qualification Cutoff Score</p>
                 <p className="text-xs text-muted-foreground">Leads scoring at or above this threshold are marked as Qualified</p>
               </div>
-              <Input type="number" defaultValue={50} className="w-20 text-center" />
+              <Input
+                type="number"
+                defaultValue={getQualificationCutoff()}
+                className="w-20 text-center"
+                onBlur={e => {
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val) && val >= 0 && val <= 100) setQualificationCutoff(val);
+                }}
+              />
             </div>
           </div>
 
