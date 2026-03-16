@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { useSearchParams } from "react-router-dom";
 import EmailSequenceTimeline from "@/components/crm/EmailSequenceTimeline";
 import LeadStagePill from "@/components/crm/LeadStagePill";
-import { getNextEmailInfo, getQualificationCutoff } from "@/components/crm/emailUtils";
+import { getNextEmailInfo, getQualificationCutoff, isQualifiedForCrm, getRoutingLabel, getRoutingBadgeClasses, sequenceTypeLabels, getSegmentLabel } from "@/components/crm/emailUtils";
 
 const budgetLabels: Record<string, string> = {
   under_30k: "<$30K", "30k_50k": "$30-50K", "50k_80k": "$50-80K", "80k_plus": "$80K+",
@@ -144,8 +144,10 @@ export default function CrmPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
-  const activeRecords = crmRecords?.filter(r => r.is_won === null) || [];
-  const closedRecords = crmRecords?.filter(r => r.is_won !== null) || [];
+  // Filter CRM records: only show QUALIFIED or DIRECT BOOKING routing decisions
+  const qualifiedRecords = crmRecords?.filter(r => isQualifiedForCrm(r.routing_decision)) || [];
+  const activeRecords = qualifiedRecords.filter(r => r.is_won === null);
+  const closedRecords = qualifiedRecords.filter(r => r.is_won !== null);
 
   const filterRecords = (list: typeof activeRecords) => list.filter(r =>
     r.full_name.toLowerCase().includes(search.toLowerCase()) ||
@@ -156,7 +158,7 @@ export default function CrmPage() {
     const records = activeTab === "active" ? activeRecords : closedRecords;
     if (!records.length) return;
     const headers = ["Name", "Email", "Score", "Segment", "Routing", "Stage", "Sales Rep"];
-    const rows = records.map(r => [`"${r.full_name}"`, r.email_address, r.qualification_score ?? "", r.customer_segment || "", r.routing_decision || "", r.lead_stage, r.sales_rep || ""]);
+    const rows = records.map(r => [`"${r.full_name}"`, r.email_address, r.qualification_score ?? "", getSegmentLabel(r.customer_segment, r.created_at), getRoutingLabel(r.routing_decision), r.lead_stage, r.sales_rep || ""]);
     const csv = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -173,7 +175,6 @@ export default function CrmPage() {
 
   // Get effective stage (auto from score or manual override)
   function getEffectiveStage(record: typeof activeRecords[0]) {
-    // If user manually set to a non-auto stage, respect it
     const autoStage = getAutoStage(record.qualification_score);
     const current = record.lead_stage?.toLowerCase();
     if (current && current !== "inquiry" && current !== "qualified") return current;
@@ -234,6 +235,8 @@ export default function CrmPage() {
                   const noContact = r.last_interaction_date && (new Date().getTime() - new Date(r.last_interaction_date).getTime()) > 24 * 60 * 60 * 1000;
                   const nextEmail = getLeadNextEmail(r.lead_id);
                   const effectiveStage = getEffectiveStage(r);
+                  const routingLabel = getRoutingLabel(r.routing_decision);
+                  const routingClasses = getRoutingBadgeClasses(routingLabel);
 
                   return (
                     <div
@@ -256,7 +259,10 @@ export default function CrmPage() {
                         <span>Last: {r.last_interaction_date ? format(new Date(r.last_interaction_date), "MMM d") : "—"}</span>
                       </div>
                       <div className="flex items-center justify-between flex-wrap gap-2">
-                        <LeadStagePill stage={effectiveStage} />
+                        <div className="flex items-center gap-2">
+                          <LeadStagePill stage={effectiveStage} />
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold uppercase ${routingClasses}`}>{routingLabel}</span>
+                        </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           {/* Next Email column */}
                           <span className={`text-[10px] font-medium ${
@@ -349,10 +355,11 @@ export default function CrmPage() {
                         { label: "Phone", value: selectedRecord.phone_number || "—" },
                         { label: "Address", value: selectedRecord.mailing_address || "—" },
                         { label: "Lead Source", value: selectedRecord.lead_source || "—" },
-                        { label: "Segment", value: selectedRecord.customer_segment },
+                        { label: "Segment", value: getSegmentLabel(selectedRecord.customer_segment, selectedRecord.created_at) },
                         { label: "Engagement", value: `${selectedRecord.engagement_score}/100` },
                         { label: "Persona", value: selectedRecord.persona_match || "—" },
-                        { label: "Routing", value: selectedRecord.routing_decision || "—" },
+                        { label: "Routing", value: getRoutingLabel(selectedRecord.routing_decision) },
+                        { label: "Sequence", value: selectedRecord.follow_up_sequence ? (sequenceTypeLabels[selectedRecord.follow_up_sequence] || `Sequence ${selectedRecord.follow_up_sequence}`) : "—" },
                       ].map(item => (
                         <div key={item.label} className="flex items-center justify-between">
                           <span className="text-muted-foreground">{item.label}</span>

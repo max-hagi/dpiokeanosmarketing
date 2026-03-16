@@ -584,7 +584,7 @@ export default function LeadDetail() {
               <hr className="border-border" />
 
               <div className="space-y-2">
-                <Select value={crmRecord.routing_decision || "NURTURE"} onValueChange={v => updateCrmMutation.mutate({ routing_decision: v })}>
+                <Select value={getRoutingLabel(crmRecord.routing_decision)} onValueChange={v => updateCrmMutation.mutate({ routing_decision: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="QUALIFIED">Qualified</SelectItem>
