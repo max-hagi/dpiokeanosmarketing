@@ -1,10 +1,12 @@
 import { useSearchParams } from "react-router-dom";
 import CreateContent from "./CreateContent";
 import ContentHistory from "./ContentHistory";
+import WeeklyPlanner from "./WeeklyPlanner";
 
 const tabs = [
   { key: "generate", label: "Generate Content" },
   { key: "history", label: "Content History" },
+  { key: "planner", label: "Weekly Planner" },
 ];
 
 export default function Marketing() {
