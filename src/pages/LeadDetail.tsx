@@ -51,7 +51,11 @@ const segmentLabels: Record<string, string> = {
   new_lead: "New Lead",
   high_value: "High Value",
   warm: "Warm",
-  dormant: "Dormant",
+  dormant: "Low Priority",
+  "Low Priority": "Low Priority",
+  "High Value": "High Value",
+  "New Lead": "New Lead",
+  Nurture: "Nurture",
 };
 
 const personaLabels: Record<string, string> = {
