@@ -551,11 +551,11 @@ export default function LeadDetail() {
               <div className="space-y-3">
                 {[
                   { label: "Customer ID", value: crmRecord.customer_id },
-                  { label: "Segment", value: crmRecord.customer_segment },
-                  { label: "Routing", value: crmRecord.routing_decision },
+                  { label: "Segment", value: getSegmentLabel(crmRecord.customer_segment, crmRecord.created_at) },
+                  { label: "Routing", value: getRoutingLabel(crmRecord.routing_decision) },
                   { label: "Engagement Score", value: `${crmRecord.engagement_score}/100` },
                   { label: "Persona", value: crmRecord.persona_match || "—" },
-                  { label: "Follow-Up Sequence", value: crmRecord.follow_up_sequence ? `Sequence ${crmRecord.follow_up_sequence}` : "—" },
+                  { label: "Follow-Up Sequence", value: crmRecord.follow_up_sequence ? (sequenceTypeLabels[crmRecord.follow_up_sequence] || `Sequence ${crmRecord.follow_up_sequence}`) : "—" },
                   { label: "Initial Contact", value: crmRecord.initial_contact_date ? format(new Date(crmRecord.initial_contact_date), "MMM d, yyyy h:mm a") : "—" },
                 ].map(item => (
                   <div key={item.label} className="flex items-center justify-between text-sm">
