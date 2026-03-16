@@ -39,6 +39,7 @@ export default function Marketing() {
 
       {activeTab === "generate" && <CreateContent />}
       {activeTab === "history" && <ContentHistory />}
+      {activeTab === "planner" && <WeeklyPlanner />}
     </div>
   );
 }

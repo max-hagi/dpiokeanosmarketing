@@ -334,9 +334,26 @@ export default function ContentHistory() {
         </div>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search by prompt or content type..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search by prompt or content type..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <div className="flex gap-1.5">
+          {sourceFilters.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setSourceFilter(f.key)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+                sourceFilter === f.key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:text-foreground"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
