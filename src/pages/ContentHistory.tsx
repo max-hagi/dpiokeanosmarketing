@@ -95,11 +95,19 @@ export default function ContentHistory() {
   const archivedRequests = requests?.filter((r) => (r as any).is_archived) || [];
 
   const filter = (list: typeof activeRequests) =>
-    list.filter(
-      (r) =>
+    list.filter((r) => {
+      const matchesSearch =
         r.prompt.toLowerCase().includes(search.toLowerCase()) ||
-        r.content_type.includes(search.toLowerCase())
-    );
+        r.content_type.includes(search.toLowerCase());
+      if (!matchesSearch) return false;
+      if (sourceFilter === "all") return true;
+      const ctx = r.additional_context;
+      let isPlanner = false;
+      if (ctx) {
+        try { isPlanner = JSON.parse(ctx)?.source === "weekly_planner"; } catch {}
+      }
+      return sourceFilter === "weekly_planner" ? isPlanner : !isPlanner;
+    });
 
   const toggleSelect = (id: string) => {
     setSelected(prev => {
