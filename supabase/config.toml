@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.conversation-agent]
 verify_jwt = false
+
+[functions.weekly-planner]
+verify_jwt = false
