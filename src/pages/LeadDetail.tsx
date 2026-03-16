@@ -17,6 +17,7 @@ import { useEffect } from "react";
 import LeadStatusBadge from "@/components/LeadStatusBadge";
 import LeadStageBadge from "@/components/LeadStageBadge";
 import QualificationReport from "@/components/QualificationReport";
+import { getRoutingLabel, getRoutingBadgeClasses, sequenceTypeLabels, getSegmentLabel } from "@/components/crm/emailUtils";
 
 const budgetLabels: Record<string, string> = {
   under_30k: "Under $30,000",
