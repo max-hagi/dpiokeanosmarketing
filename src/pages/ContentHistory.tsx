@@ -32,6 +32,7 @@ export default function ContentHistory() {
   const setTab = (tab: string) => { setSearchParams((prev) => { prev.set("htab", tab); return prev; }); setSelected(new Set()); };
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sourceFilter, setSourceFilter] = useState("all");
 
   const { data: requests, isLoading } = useQuery({
     queryKey: ["all-requests"],
