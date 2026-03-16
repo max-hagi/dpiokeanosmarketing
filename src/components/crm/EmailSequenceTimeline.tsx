@@ -262,7 +262,7 @@ export default function EmailSequenceTimeline({ messages, sequence, leadName, le
                     </div>
 
                     {/* Action buttons — visible on hover (always on mobile) */}
-                    {!isSent && !isSkipped && displayStatus !== "responded" && (
+                    {!isSent && !isSkipped && msg.status !== "responded" && (
                       <div className="mt-2 flex flex-wrap gap-1.5 opacity-0 group-hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 max-sm:opacity-100 transition-opacity">
                         <Button
                           variant="outline"
