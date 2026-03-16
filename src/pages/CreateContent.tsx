@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -32,11 +32,22 @@ const audiences = [
 
 export default function CreateContent() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [prompt, setPrompt] = useState("");
   const [contentType, setContentType] = useState<ContentType>("social_post");
   const [targetAudience, setTargetAudience] = useState("");
   const [additionalContext, setAdditionalContext] = useState("");
   const [generateImage, setGenerateImage] = useState(false);
+
+  // Pre-fill from Weekly Planner's "Generate Image" button
+  useEffect(() => {
+    const prefill = searchParams.get("prefill");
+    if (prefill) {
+      setPrompt(prefill);
+      setContentType("image");
+      setGenerateImage(true);
+    }
+  }, [searchParams]);
 
   const generateMutation = useMutation({
     mutationFn: async () => {

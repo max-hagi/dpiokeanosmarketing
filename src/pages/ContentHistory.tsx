@@ -19,6 +19,12 @@ const tabs = [
   { key: "archived", label: "Archived" },
 ];
 
+const sourceFilters = [
+  { key: "all", label: "All" },
+  { key: "single", label: "Single Post" },
+  { key: "weekly_planner", label: "Weekly Planner" },
+];
+
 export default function ContentHistory() {
   const [search, setSearch] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,6 +32,7 @@ export default function ContentHistory() {
   const setTab = (tab: string) => { setSearchParams((prev) => { prev.set("htab", tab); return prev; }); setSelected(new Set()); };
   const queryClient = useQueryClient();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [sourceFilter, setSourceFilter] = useState("all");
 
   const { data: requests, isLoading } = useQuery({
     queryKey: ["all-requests"],
@@ -88,11 +95,19 @@ export default function ContentHistory() {
   const archivedRequests = requests?.filter((r) => (r as any).is_archived) || [];
 
   const filter = (list: typeof activeRequests) =>
-    list.filter(
-      (r) =>
+    list.filter((r) => {
+      const matchesSearch =
         r.prompt.toLowerCase().includes(search.toLowerCase()) ||
-        r.content_type.includes(search.toLowerCase())
-    );
+        r.content_type.includes(search.toLowerCase());
+      if (!matchesSearch) return false;
+      if (sourceFilter === "all") return true;
+      const ctx = r.additional_context;
+      let isPlanner = false;
+      if (ctx) {
+        try { isPlanner = JSON.parse(ctx)?.source === "weekly_planner"; } catch {}
+      }
+      return sourceFilter === "weekly_planner" ? isPlanner : !isPlanner;
+    });
 
   const toggleSelect = (id: string) => {
     setSelected(prev => {
@@ -319,9 +334,26 @@ export default function ContentHistory() {
         </div>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search by prompt or content type..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input placeholder="Search by prompt or content type..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+        </div>
+        <div className="flex gap-1.5">
+          {sourceFilters.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setSourceFilter(f.key)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+                sourceFilter === f.key
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:text-foreground"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="glass-card rounded-2xl overflow-hidden shadow-sm">
