@@ -19,6 +19,12 @@ const tabs = [
   { key: "archived", label: "Archived" },
 ];
 
+const sourceFilters = [
+  { key: "all", label: "All" },
+  { key: "single", label: "Single Post" },
+  { key: "weekly_planner", label: "Weekly Planner" },
+];
+
 export default function ContentHistory() {
   const [search, setSearch] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
