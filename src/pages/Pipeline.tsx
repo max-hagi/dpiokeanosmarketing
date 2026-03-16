@@ -8,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import {
   Search, Download, Users, Mail, Phone, MapPin, DollarSign, Clock,
   Sparkles, Target, Loader2, RotateCw, Eye, ArrowRight,
-  ShieldCheck, UserCheck, MessageSquare, Archive, ArchiveRestore, Trash2, X
+  ShieldCheck, UserCheck, MessageSquare, Archive, ArchiveRestore, Trash2, X, ArrowUpRight
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { getRoutingLabel, getRoutingBadgeClasses, sequenceTypeLabels, getSegmentLabel } from "@/components/crm/emailUtils";
 
 const budgetLabels: Record<string, string> = {
   under_30k: "<$30K", "30k_50k": "$30-50K", "50k_80k": "$50-80K", "80k_plus": "$80K+",
@@ -74,6 +75,7 @@ export default function Pipeline() {
   const [selectedLeadId, setSelectedLeadId] = useState<string | null>(null);
   const [showTranscript, setShowTranscript] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [promoteLeadId, setPromoteLeadId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   const setTab = (tab: string) => { setSearchParams({ tab }); setSelected(new Set()); };
@@ -85,7 +87,7 @@ export default function Pipeline() {
       if (error) throw error;
       return data;
     },
-    refetchInterval: 8000, // Auto-refresh to catch pipeline updates
+    refetchInterval: 8000,
   });
 
   const { data: crmRecords } = useQuery({
@@ -177,6 +179,32 @@ export default function Pipeline() {
       setSelected(new Set());
     },
     onError: () => toast.error("Failed to delete lead"),
+  });
+
+  const promoteToCrmMutation = useMutation({
+    mutationFn: async (leadId: string) => {
+      // Update the lead's routing_action to qualified
+      await supabase.from("leads").update({ routing_action: "fast_track" } as any).eq("id", leadId);
+      // Update the CRM record's routing_decision if it exists
+      const { data: existingCrm } = await supabase.from("crm_records").select("id").eq("lead_id", leadId).maybeSingle();
+      if (existingCrm) {
+        await supabase.from("crm_records").update({ routing_decision: "QUALIFIED" }).eq("id", existingCrm.id);
+      }
+      // Pause any active nurture sequence
+      const { data: activeSeq } = await supabase.from("follow_up_sequences").select("id").eq("lead_id", leadId).eq("status", "active").maybeSingle();
+      if (activeSeq) {
+        await supabase.from("follow_up_sequences").update({ status: "paused" }).eq("id", activeSeq.id);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["crm-records-all"] });
+      queryClient.invalidateQueries({ queryKey: ["follow-up-sequences"] });
+      toast.success("Lead promoted to CRM as Qualified!");
+      setPromoteLeadId(null);
+      setSelectedLeadId(null);
+    },
+    onError: () => toast.error("Failed to promote lead"),
   });
 
   const activeLeads = leads?.filter(l => !(l as any).is_archived) || [];
@@ -293,12 +321,16 @@ export default function Pipeline() {
               <tbody className="divide-y divide-border">
                 {filter(activeLeads).map(lead => {
                   const nurture = getNurtureInfo(lead.id);
+                  const seqType = (nurture.seq as any)?.sequence_type;
                   const nurtureLabel = nurture.seq
-                    ? nurture.hasResponded ? "Replied" : `Seq ${(nurture.seq as any).sequence_type}`
+                    ? nurture.hasResponded ? "Replied" : (sequenceTypeLabels[seqType] || `Sequence ${seqType}`)
                     : (lead.qualification_score != null && lead.qualification_score < 50) ? "Pending" : "—";
                   const nurtureColor = nurture.hasResponded
                     ? "text-primary"
                     : nurture.seq ? "text-warning" : "text-muted-foreground";
+
+                  const routingLabel = getRoutingLabel(lead.routing_action);
+                  const routingClasses = getRoutingBadgeClasses(routingLabel);
 
                   return (
                     <tr key={lead.id} className={`hover:bg-muted/30 transition-colors cursor-pointer ${selected.has(lead.id) ? "bg-primary/5" : ""}`} onClick={() => { setSelectedLeadId(lead.id); setShowTranscript(false); }}>
@@ -313,11 +345,7 @@ export default function Pipeline() {
                       <td className="px-5 py-3"><ScorePill score={lead.qualification_score} /></td>
                       <td className="px-5 py-3">
                         {lead.routing_action ? (
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
-                            lead.routing_action === "QUALIFIED" ? "bg-success/10 text-success" :
-                            lead.routing_action === "DIRECT BOOKING" ? "bg-accent/10 text-accent" :
-                            "bg-warning/10 text-warning"
-                          }`}>{lead.routing_action}</span>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${routingClasses}`}>{routingLabel}</span>
                         ) : <span className="text-xs text-muted-foreground">—</span>}
                       </td>
                       <td className="px-5 py-3">
@@ -560,10 +588,12 @@ export default function Pipeline() {
                 {(() => {
                   const { seq, msgs, hasResponded } = getNurtureInfo(selectedLead.id);
                   if (!seq && msgs.length === 0) return null;
+                  const seqType = (seq as any)?.sequence_type;
+                  const seqLabel = seqType ? (sequenceTypeLabels[seqType] || `Sequence ${seqType}`) : "";
                   return (
                     <section className="space-y-2">
                       <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                        Follow-up Sequence {seq ? `— Type ${(seq as any).sequence_type}` : ""}
+                        Follow-up — {seqLabel}
                       </h3>
                       <div className="space-y-1.5">
                         {msgs.map(m => (
@@ -594,9 +624,15 @@ export default function Pipeline() {
                       <Button variant="outline" size="sm" className="gap-1" onClick={() => qualifyMutation.mutate(selectedLead.id)} disabled={qualifyMutation.isPending}>
                         <RotateCw className={`h-3.5 w-3.5 ${qualifyMutation.isPending ? "animate-spin" : ""}`} /> Re-score
                       </Button>
-                      {(selectedLead.qualification_score ?? 0) >= 50 && (
+                      {/* Promote to CRM — for nurture leads not yet in CRM as qualified */}
+                      {getRoutingLabel(selectedLead.routing_action) === "NURTURE" && (
+                        <Button size="sm" className="gap-1 bg-success/90 hover:bg-success text-success-foreground" onClick={() => setPromoteLeadId(selectedLead.id)}>
+                          <ArrowUpRight className="h-3.5 w-3.5" /> Promote to CRM
+                        </Button>
+                      )}
+                      {getRoutingLabel(selectedLead.routing_action) === "QUALIFIED" && (
                         <Link to={`/crm?lead=${selectedLead.id}`}>
-                          <Button size="sm" className="gap-1"><ArrowRight className="h-3.5 w-3.5" /> Move to CRM</Button>
+                          <Button size="sm" className="gap-1"><ArrowRight className="h-3.5 w-3.5" /> View in CRM</Button>
                         </Link>
                       )}
                     </>
@@ -619,6 +655,27 @@ export default function Pipeline() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Promote to CRM Confirmation Dialog */}
+      <AlertDialog open={!!promoteLeadId} onOpenChange={(open) => { if (!open) setPromoteLeadId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Promote to CRM?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Move {leads?.find(l => l.id === promoteLeadId)?.full_name} to CRM as a Qualified lead? Their routing decision will be updated to QUALIFIED. Their nurture sequence will be paused.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-success text-success-foreground hover:bg-success/90"
+              onClick={() => promoteLeadId && promoteToCrmMutation.mutate(promoteLeadId)}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

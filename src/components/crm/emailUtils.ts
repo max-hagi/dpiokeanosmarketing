@@ -51,13 +51,51 @@ export function getExactTime(dateStr: string | null): string {
   return format(new Date(dateStr), "EEEE MMMM d 'at' h:mm a");
 }
 
-// Sequence type labels
+// Sequence type labels — human-readable names
 export const sequenceTypeLabels: Record<string, string> = {
-  A: "Sequence A — Qualified Lead",
-  B: "Sequence B — Nurture",
-  C: "Sequence C — Budget Recovery",
-  D: "Sequence D — Location Recovery",
+  A: "Qualified Outreach",
+  B: "Nurture — General",
+  C: "Nurture — Budget",
+  D: "Nurture — Location",
 };
+
+// Routing action display labels — maps internal values to user-friendly labels
+export const routingActionLabels: Record<string, string> = {
+  fast_track: "QUALIFIED",
+  qualified: "QUALIFIED",
+  QUALIFIED: "QUALIFIED",
+  nurture_conversation: "NURTURE",
+  sales_review: "NURTURE",
+  drip_nurture: "NURTURE",
+  disqualify: "NURTURE",
+  NURTURE: "NURTURE",
+  "DIRECT BOOKING": "DIRECT BOOKING",
+  direct_booking: "DIRECT BOOKING",
+};
+
+export function getRoutingLabel(routingAction: string | null): string {
+  if (!routingAction) return "—";
+  return routingActionLabels[routingAction] || routingAction;
+}
+
+export function getRoutingBadgeClasses(label: string): string {
+  switch (label) {
+    case "QUALIFIED":
+      return "bg-success/10 text-success";
+    case "DIRECT BOOKING":
+      return "bg-primary/10 text-primary";
+    case "NURTURE":
+      return "bg-warning/10 text-warning";
+    default:
+      return "bg-muted text-muted-foreground";
+  }
+}
+
+// Check if a routing decision means the lead belongs in CRM
+export function isQualifiedForCrm(routingDecision: string | null): boolean {
+  const label = getRoutingLabel(routingDecision);
+  return label === "QUALIFIED" || label === "DIRECT BOOKING";
+}
 
 // Stage color config
 export const stageColors: Record<string, { bg: string; text: string }> = {
@@ -94,4 +132,15 @@ export function getQualificationCutoff(): number {
 }
 export function setQualificationCutoff(score: number): void {
   localStorage.setItem(CUTOFF_KEY, String(score));
+}
+
+// Segment label mapping — replaces "Dormant" for recent leads
+export function getSegmentLabel(segment: string | null, createdAt?: string): string {
+  if (!segment) return "New Lead";
+  // If "Dormant" but created < 60 days ago, show "Low Priority" instead
+  if (segment === "Dormant" && createdAt) {
+    const daysSinceCreation = (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceCreation < 60) return "Low Priority";
+  }
+  return segment;
 }
