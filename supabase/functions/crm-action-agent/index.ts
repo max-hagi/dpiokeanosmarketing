@@ -82,10 +82,15 @@ function generateCustomerId(): string {
   return id;
 }
 
-function determineSegment(score: number): string {
+function determineSegment(score: number, createdAt?: string): string {
   if (score >= 70) return "High Value";
-  if (score >= 50) return "New Lead";
-  return "Dormant";
+  if (score >= 30) return "Nurture";
+  // Only "Dormant" if lead is 60+ days old
+  if (createdAt) {
+    const daysSince = (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSince >= 60) return "Dormant";
+  }
+  return "Low Priority";
 }
 
 function determineRouting(fitLevel: string, score: number): string {
