@@ -291,8 +291,8 @@ MISSING FIELDS: ${JSON.stringify(lead.missing_fields || [])}`,
     let routingReason: string;
 
     if (fitLevel === "high_fit") {
-      routingAction = "fast_track";
-      routingReason = `High-fit lead (score ${totalScore}/100). Priority routing for immediate sales follow-up. ${lead.timeline === "asap" || lead.timeline === "within_3_months" ? "Urgent timeline — contact within 4 hours." : "Schedule discovery call within 24 hours."}`;
+      routingAction = "qualified";
+      routingReason = `Qualified lead (score ${totalScore}/100). Priority routing for immediate sales follow-up. ${lead.timeline === "asap" || lead.timeline === "within_3_months" ? "Urgent timeline — contact within 4 hours." : "Schedule discovery call within 24 hours."}`;
     } else if (fitLevel === "medium_fit") {
       // Check what's missing to decide routing
       const missingFields = lead.missing_fields as string[] || [];
@@ -300,21 +300,21 @@ MISSING FIELDS: ${JSON.stringify(lead.missing_fields || [])}`,
       const hasTimeline = !!lead.timeline;
 
       if (!hasBudget || !hasTimeline || missingFields.length > 0) {
-        routingAction = "nurture_conversation";
-        routingReason = `Medium-fit lead (score ${totalScore}/100). Missing key info (${missingFields.join(", ") || "budget/timeline"}). Route to Conversation Agent to gather details before sales handoff.`;
+        routingAction = "nurture";
+        routingReason = `Nurture lead (score ${totalScore}/100). Missing key info (${missingFields.join(", ") || "budget/timeline"}). Route to automated nurture sequence to gather details before sales handoff.`;
       } else {
-        routingAction = "sales_review";
-        routingReason = `Medium-fit lead (score ${totalScore}/100). Profile is complete but fit is moderate. Route to sales team for manual review and potential discovery call.`;
+        routingAction = "nurture";
+        routingReason = `Nurture lead (score ${totalScore}/100). Profile is complete but fit is moderate. Route to nurture sequence with periodic re-evaluation.`;
       }
     } else {
       // low_fit
       const hasDisqualifier = projectFitScore <= 0;
       if (hasDisqualifier) {
-        routingAction = "disqualify";
-        routingReason = `Low-fit lead (score ${totalScore}/100). Project requirements outside Okeanos service scope. Send polite decline with referral suggestions.`;
+        routingAction = "nurture";
+        routingReason = `Nurture lead (score ${totalScore}/100). Project requirements may be outside core scope. Add to nurture sequence with educational content.`;
       } else {
-        routingAction = "drip_nurture";
-        routingReason = `Low-fit lead (score ${totalScore}/100). Not currently a strong match but may convert with time. Add to email drip campaign for future follow-up.`;
+        routingAction = "nurture";
+        routingReason = `Nurture lead (score ${totalScore}/100). Not currently a strong match but may convert with time. Add to nurture sequence for future follow-up.`;
       }
     }
 
