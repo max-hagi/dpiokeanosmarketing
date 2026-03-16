@@ -160,7 +160,7 @@ serve(async (req) => {
       })
       .map(([key]) => key);
 
-    const segment = determineSegment(qData.total_score);
+    const segment = determineSegment(qData.total_score, lead.created_at);
     const routing = determineRouting(qData.fit_level, qData.total_score);
     const sequenceType = determineSequenceType(qData.fit_level, qData.total_score, weakCategories);
 

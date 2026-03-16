@@ -209,7 +209,7 @@ MISSING FIELDS: ${JSON.stringify(lead.missing_fields || [])}`,
       }),
     });
 
-    let projectFitScore = 10; // default mid
+    let projectFitScore = 8; // neutral default when no info captured
     let leadQualityBonus = 0;
     let keyStrengths: string[] = ["Lead submitted an inquiry"];
     let keyRisks: string[] = ["Requires further conversation to assess fit"];

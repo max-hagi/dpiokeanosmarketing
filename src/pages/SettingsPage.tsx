@@ -108,22 +108,22 @@ function humanizeDetail(action: string, details: any): string {
 
 const SEQUENCE_INFO: Record<string, { name: string; description: string; icon: typeof Mail }> = {
   A: {
-    name: "Qualified Lead Follow-Up",
+    name: "Qualified Outreach",
     description: "For leads scoring 50+. Summary email → gentle nudge → educational resource → final check-in over 14 days.",
     icon: CheckCircle,
   },
   B: {
-    name: "Nurture Sequence",
+    name: "Nurture — General",
     description: "For leads scoring below 50. Educational content and periodic check-ins over 45 days to build trust and re-score.",
     icon: RotateCcw,
   },
   C: {
-    name: "Budget Recovery",
+    name: "Nurture — Budget",
     description: "For leads who didn't share budget or indicated below $35k. Transparent pricing breakdown sent immediately.",
     icon: DollarSign,
   },
   D: {
-    name: "Location Recovery",
+    name: "Nurture — Location",
     description: "For leads outside the core service area or with unconfirmed location. Quick location check sent immediately.",
     icon: MapPin,
   },
