@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { Loader2, Search, ChevronDown, Copy, RefreshCw, Clipboard, Image as ImageIcon, Pencil, Archive } from "lucide-react";
+import {
+  Loader2, Search, ChevronDown, Copy, RefreshCw, Clipboard,
+  Image as ImageIcon, Pencil, Archive, Send, Video, CheckCircle2,
+  Calendar,
+} from "lucide-react";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 
 type Post = {
@@ -86,10 +90,27 @@ export default function WeeklyPlanner() {
   const [trendsOpen, setTrendsOpen] = useState(true);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editCaption, setEditCaption] = useState("");
+  const [queuedPosts, setQueuedPosts] = useState<Set<number>>(new Set());
 
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
   const weekLabel = `${format(weekStart, "MMM d")} – ${format(weekEnd, "MMM d, yyyy")}`;
+
+  // Check which platforms are connected
+  const { data: connections } = useQuery({
+    queryKey: ["social-connections"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("social_connections")
+        .select("platform, is_active");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const connectionMap = new Map(
+    (connections || []).map((c: any) => [c.platform, c.is_active])
+  );
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -97,6 +118,7 @@ export default function WeeklyPlanner() {
       setTrends([]);
       setPosts([]);
       setTrendsOpen(true);
+      setQueuedPosts(new Set());
 
       const { data, error } = await supabase.functions.invoke("weekly-planner", {
         body: {
@@ -115,7 +137,6 @@ export default function WeeklyPlanner() {
     onSuccess: (data) => {
       setTrends(data.trends);
       setStep("generating");
-      // Small delay for UX
       setTimeout(() => {
         setPosts(data.posts);
         setStep("done");
@@ -155,7 +176,6 @@ export default function WeeklyPlanner() {
   };
 
   const openGenerateImage = (imagePrompt: string) => {
-    // Navigate to generate tab with prompt pre-filled via search params
     setSearchParams({ tab: "generate", prefill: imagePrompt });
   };
 
@@ -186,6 +206,76 @@ export default function WeeklyPlanner() {
     }
   };
 
+  // Queue a single post for publishing (save + format + queue)
+  const queueForPublishing = async (post: Post, index: number) => {
+    try {
+      // 1. Save to content_requests
+      const { data: request, error: reqError } = await supabase
+        .from("content_requests")
+        .insert({
+          prompt: post.caption,
+          content_type: "social_post" as any,
+          target_audience: "Homeowners",
+          additional_context: JSON.stringify({
+            source: "weekly_planner",
+            week: weekLabel,
+            platform: post.platform,
+            content_type: post.content_type,
+            trend_tag: post.trend_tag,
+            visual_direction: post.visual_direction,
+            image_prompt: post.image_prompt,
+            video_hook: post.video_hook,
+            hashtags: post.hashtags,
+          }),
+          status: "queued" as any,
+        })
+        .select()
+        .single();
+
+      if (reqError) throw reqError;
+
+      // 2. Call format-for-platform to create platform-specific queue entry
+      const { data, error } = await supabase.functions.invoke("format-for-platform", {
+        body: {
+          requestId: request.id,
+          platforms: [post.platform],
+          caption: post.caption,
+          hashtags: post.hashtags,
+          imageUrl: null, // No image yet, can be added later
+          mediaType: post.content_type === "reel" || post.content_type === "short_video" ? "video" : "image",
+          videoHook: post.video_hook,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      setQueuedPosts((prev) => new Set(prev).add(index));
+      queryClient.invalidateQueries({ queryKey: ["content-queue"] });
+      queryClient.invalidateQueries({ queryKey: ["all-requests"] });
+      toast.success(`Post ${index + 1} queued for ${post.platform}!`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to queue post");
+    }
+  };
+
+  // Queue ALL posts at once
+  const queueAllPosts = async () => {
+    let successCount = 0;
+    for (let i = 0; i < posts.length; i++) {
+      if (queuedPosts.has(i)) continue; // Skip already queued
+      try {
+        await queueForPublishing(posts[i], i);
+        successCount++;
+      } catch {
+        // Individual errors already toasted
+      }
+    }
+    if (successCount > 0) {
+      toast.success(`${successCount} posts queued for publishing!`);
+    }
+  };
+
   const startEdit = (idx: number) => {
     setEditingIdx(idx);
     setEditCaption(posts[idx].caption);
@@ -196,22 +286,25 @@ export default function WeeklyPlanner() {
       prev.map((p, i) => (i === idx ? { ...p, caption: editCaption } : p))
     );
     setEditingIdx(null);
-    toast.success("Caption updated");
   };
 
+  const isVideoContent = (contentType: string) =>
+    ["reel", "short_video", "story"].includes(contentType);
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* INPUT SECTION */}
+    <div className="space-y-6">
+      {/* FORM */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Generate This Week's Content Plan</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {/* Focus Theme */}
+        <CardContent className="p-6 space-y-5">
+          <div className="space-y-2">
+            <h2 className="font-heading text-xl font-bold">Generate This Week's Content Plan</h2>
+          </div>
+
+          {/* Theme */}
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">Weekly theme or campaign focus (optional)</Label>
             <Input
-              placeholder="e.g. Spring pool season, fiberglass vs concrete, Ontario backyard ideas"
+              placeholder="e.g. Spring pool season, fiberglass vs concrete, Ontario backy..."
               value={focusTheme}
               onChange={(e) => setFocusTheme(e.target.value)}
             />
@@ -219,7 +312,7 @@ export default function WeeklyPlanner() {
           </div>
 
           {/* Platforms */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label className="text-sm font-medium">Platforms</Label>
             <div className="flex flex-wrap gap-3">
               {platformOptions.map((p) => (
@@ -229,13 +322,16 @@ export default function WeeklyPlanner() {
                     onCheckedChange={() => togglePlatform(p.key)}
                   />
                   {p.label}
+                  {connectionMap.get(p.key) && (
+                    <CheckCircle2 className="h-3 w-3 text-green-500" />
+                  )}
                 </label>
               ))}
             </div>
           </div>
 
           {/* Content Mix */}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label className="text-sm font-medium">Content Mix</Label>
             <div className="flex flex-wrap gap-3">
               {contentMixOptions.map((m) => (
@@ -291,7 +387,7 @@ export default function WeeklyPlanner() {
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="py-4 flex items-center gap-3">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <span className="text-sm font-medium">🔍 Searching for current trends...</span>
+            <span className="text-sm font-medium">Searching for current trends...</span>
           </CardContent>
         </Card>
       )}
@@ -300,7 +396,7 @@ export default function WeeklyPlanner() {
         <Card className="border-primary/30 bg-primary/5">
           <CardContent className="py-4 flex items-center gap-3">
             <Loader2 className="h-5 w-5 animate-spin text-primary" />
-            <span className="text-sm font-medium">✍️ Building your content plan...</span>
+            <span className="text-sm font-medium">Building your content plan...</span>
           </CardContent>
         </Card>
       )}
@@ -311,7 +407,7 @@ export default function WeeklyPlanner() {
           <Card>
             <CollapsibleTrigger asChild>
               <button className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors rounded-t-lg">
-                <span className="text-sm font-medium">🔍 Trends Found ({trends.length})</span>
+                <span className="text-sm font-medium">Trends Found ({trends.length})</span>
                 <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${trendsOpen ? "rotate-180" : ""}`} />
               </button>
             </CollapsibleTrigger>
@@ -324,7 +420,7 @@ export default function WeeklyPlanner() {
                     <span className="text-xs text-muted-foreground whitespace-nowrap ml-auto">({t.source})</span>
                   </div>
                 ))}
-                <p className="text-xs text-muted-foreground mt-3 pt-2 border-t border-border">Plan generated using these trends ↓</p>
+                <p className="text-xs text-muted-foreground mt-3 pt-2 border-t border-border">Plan generated using these trends</p>
               </CardContent>
             </CollapsibleContent>
           </Card>
@@ -344,89 +440,125 @@ export default function WeeklyPlanner() {
                 <RefreshCw className="h-3.5 w-3.5" /> Regenerate
               </Button>
               <Button variant="outline" size="sm" className="gap-1.5" onClick={copyAllCaptions}>
-                <Clipboard className="h-3.5 w-3.5" /> Copy All Captions
+                <Clipboard className="h-3.5 w-3.5" /> Copy All
+              </Button>
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={queueAllPosts}
+                disabled={queuedPosts.size === posts.length}
+              >
+                <Send className="h-3.5 w-3.5" />
+                {queuedPosts.size === posts.length ? "All Queued" : "Queue All for Publishing"}
               </Button>
             </div>
           </div>
 
           {/* Post cards */}
           <div className="space-y-4">
-            {posts.map((post, idx) => (
-              <Card key={idx} className="overflow-hidden">
-                <CardContent className="p-5 space-y-4">
-                  {/* Header badges */}
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline" className={platformColors[post.platform] || ""}>{post.platform}</Badge>
-                    <Badge variant="outline" className={contentTypeColors[post.content_type] || ""}>{post.content_type.replace("_", " ")}</Badge>
-                    <Badge variant="secondary">{post.trend_tag}</Badge>
-                  </div>
+            {posts.map((post, idx) => {
+              const isQueued = queuedPosts.has(idx);
+              const connected = connectionMap.get(post.platform);
 
-                  {/* Caption */}
-                  <div className="space-y-2">
-                    {editingIdx === idx ? (
-                      <div className="space-y-2">
-                        <textarea
-                          className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm"
-                          value={editCaption}
-                          onChange={(e) => setEditCaption(e.target.value)}
-                        />
-                        <div className="flex gap-2">
-                          <Button size="sm" onClick={() => saveEdit(idx)}>Save</Button>
-                          <Button size="sm" variant="ghost" onClick={() => setEditingIdx(null)}>Cancel</Button>
+              return (
+                <Card key={idx} className={`overflow-hidden ${isQueued ? "border-green-300 dark:border-green-700" : ""}`}>
+                  <CardContent className="p-5 space-y-4">
+                    {/* Header badges */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className={platformColors[post.platform] || ""}>{post.platform}</Badge>
+                      <Badge variant="outline" className={contentTypeColors[post.content_type] || ""}>{post.content_type.replace("_", " ")}</Badge>
+                      <Badge variant="secondary">{post.trend_tag}</Badge>
+                      {isQueued && (
+                        <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> Queued
+                        </Badge>
+                      )}
+                      {connected && (
+                        <span className="text-xs text-green-600 dark:text-green-400 ml-auto flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> Connected
+                        </span>
+                      )}
+                      {!connected && (
+                        <span className="text-xs text-muted-foreground ml-auto">Not connected</span>
+                      )}
+                    </div>
+
+                    {/* Caption */}
+                    <div className="space-y-2">
+                      {editingIdx === idx ? (
+                        <div className="space-y-2">
+                          <textarea
+                            className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            value={editCaption}
+                            onChange={(e) => setEditCaption(e.target.value)}
+                          />
+                          <div className="flex gap-2">
+                            <Button size="sm" onClick={() => saveEdit(idx)}>Save</Button>
+                            <Button size="sm" variant="ghost" onClick={() => setEditingIdx(null)}>Cancel</Button>
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      <p className="text-sm whitespace-pre-wrap">{post.caption}</p>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      {post.hashtags.map((h) => `#${h}`).join(" ")}
-                    </p>
-                  </div>
-
-                  {/* Visual Direction */}
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">Visual:</p>
-                    <p className="text-sm">{post.visual_direction}</p>
-                  </div>
-
-                  {/* Image Prompt */}
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-muted-foreground">Image prompt →</p>
-                    <div
-                      className="text-sm bg-muted/50 rounded-md px-3 py-2 cursor-pointer hover:bg-muted transition-colors"
-                      onClick={() => { navigator.clipboard.writeText(post.image_prompt); toast.success("Image prompt copied!"); }}
-                      title="Click to copy"
-                    >
-                      {post.image_prompt}
+                      ) : (
+                        <p className="text-sm whitespace-pre-wrap">{post.caption}</p>
+                      )}
+                      <p className="text-xs text-muted-foreground">
+                        {post.hashtags.map((h) => `#${h}`).join(" ")}
+                      </p>
                     </div>
-                  </div>
 
-                  {/* Video Hook */}
-                  {post.video_hook && (
+                    {/* Visual Direction */}
                     <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Video hook:</p>
-                      <p className="text-sm italic">"{post.video_hook}"</p>
+                      <p className="text-xs font-medium text-muted-foreground">Visual:</p>
+                      <p className="text-sm">{post.visual_direction}</p>
                     </div>
-                  )}
 
-                  {/* Actions */}
-                  <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
-                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => copyCaption(post)}>
-                      <Copy className="h-3.5 w-3.5" /> Copy Caption
-                    </Button>
-                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openGenerateImage(post.image_prompt)}>
-                      <ImageIcon className="h-3.5 w-3.5" /> Generate Image →
-                    </Button>
-                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => startEdit(idx)}>
-                      <Pencil className="h-3.5 w-3.5" /> Edit
-                    </Button>
-                    <Button variant="outline" size="sm" className="gap-1.5" onClick={() => saveToHistory(post, idx)}>
-                      <Archive className="h-3.5 w-3.5" /> Save to History
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    {/* Image Prompt */}
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Image prompt</p>
+                      <div
+                        className="text-sm bg-muted/50 rounded-md px-3 py-2 cursor-pointer hover:bg-muted transition-colors"
+                        onClick={() => { navigator.clipboard.writeText(post.image_prompt); toast.success("Image prompt copied!"); }}
+                        title="Click to copy"
+                      >
+                        {post.image_prompt}
+                      </div>
+                    </div>
+
+                    {/* Video Hook */}
+                    {post.video_hook && (
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground">Video hook:</p>
+                        <p className="text-sm italic">"{post.video_hook}"</p>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-border">
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => copyCaption(post)}>
+                        <Copy className="h-3.5 w-3.5" /> Copy Caption
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => openGenerateImage(post.image_prompt)}>
+                        <ImageIcon className="h-3.5 w-3.5" /> Generate Image
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => startEdit(idx)}>
+                        <Pencil className="h-3.5 w-3.5" /> Edit
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => saveToHistory(post, idx)}>
+                        <Archive className="h-3.5 w-3.5" /> Save to History
+                      </Button>
+                      {!isQueued && (
+                        <Button
+                          size="sm"
+                          className="gap-1.5 ml-auto"
+                          onClick={() => queueForPublishing(post, idx)}
+                        >
+                          <Send className="h-3.5 w-3.5" /> Queue for Publishing
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </>
       )}
