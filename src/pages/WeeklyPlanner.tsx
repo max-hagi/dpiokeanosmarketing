@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import {
   Loader2, Search, ChevronDown, Copy, RefreshCw, Clipboard,
   Image as ImageIcon, Pencil, Archive, Send, Video, CheckCircle2,
-  Calendar,
+  Calendar, XCircle,
 } from "lucide-react";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 
