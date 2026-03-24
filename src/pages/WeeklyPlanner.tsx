@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import {
   Loader2, Search, ChevronDown, Copy, RefreshCw, Clipboard,
   Image as ImageIcon, Pencil, Archive, Send, Video, CheckCircle2,
-  Calendar,
+  Calendar, XCircle,
 } from "lucide-react";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 
@@ -74,23 +74,46 @@ const contentTypeColors: Record<string, string> = {
   short_video: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
 };
 
+// Session storage helpers to persist results across tab switches
+const STORAGE_KEY = "weekly-planner-results";
+
+function loadSavedState() {
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved) as { trends: Trend[]; posts: Post[]; queuedPosts: number[] };
+  } catch {}
+  return null;
+}
+
+function saveState(trends: Trend[], posts: Post[], queuedPosts: Set<number>) {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ trends, posts, queuedPosts: Array.from(queuedPosts) }));
+  } catch {}
+}
+
+function clearSavedState() {
+  try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
+}
+
 export default function WeeklyPlanner() {
   const navigate = useNavigate();
   const [, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+
+  const saved = loadSavedState();
 
   const [focusTheme, setFocusTheme] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["instagram", "tiktok", "facebook"]);
   const [selectedMix, setSelectedMix] = useState<string[]>(["educational", "behind_the_scenes", "trend_driven", "promotional", "social_proof"]);
   const [tone, setTone] = useState("default");
 
-  const [step, setStep] = useState<"idle" | "researching" | "generating" | "done">("idle");
-  const [trends, setTrends] = useState<Trend[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [trendsOpen, setTrendsOpen] = useState(true);
+  const [step, setStep] = useState<"idle" | "researching" | "generating" | "done">(saved?.posts?.length ? "done" : "idle");
+  const [trends, setTrends] = useState<Trend[]>(saved?.trends || []);
+  const [posts, setPosts] = useState<Post[]>(saved?.posts || []);
+  const [trendsOpen, setTrendsOpen] = useState(!saved?.posts?.length);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editCaption, setEditCaption] = useState("");
-  const [queuedPosts, setQueuedPosts] = useState<Set<number>>(new Set());
+  const [queuedPosts, setQueuedPosts] = useState<Set<number>>(new Set(saved?.queuedPosts || []));
 
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
@@ -141,6 +164,7 @@ export default function WeeklyPlanner() {
         setPosts(data.posts);
         setStep("done");
         setTrendsOpen(false);
+        saveState(data.trends, data.posts, new Set());
       }, 800);
     },
     onError: (error) => {
@@ -250,7 +274,7 @@ export default function WeeklyPlanner() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setQueuedPosts((prev) => new Set(prev).add(index));
+      setQueuedPosts((prev) => { const next = new Set(prev).add(index); saveState(trends, posts, next); return next; });
       queryClient.invalidateQueries({ queryKey: ["content-queue"] });
       queryClient.invalidateQueries({ queryKey: ["all-requests"] });
       toast.success(`Post ${index + 1} queued for ${post.platform}!`);
@@ -435,12 +459,15 @@ export default function WeeklyPlanner() {
             <p className="text-sm text-muted-foreground">
               Week of {weekLabel} · {posts.length} posts · Platforms: {[...new Set(posts.map((p) => p.platform))].join(", ")} · Based on {trends.length} trends
             </p>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button variant="outline" size="sm" className="gap-1.5" onClick={() => generateMutation.mutate()}>
                 <RefreshCw className="h-3.5 w-3.5" /> Regenerate
               </Button>
               <Button variant="outline" size="sm" className="gap-1.5" onClick={copyAllCaptions}>
                 <Clipboard className="h-3.5 w-3.5" /> Copy All
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => { setStep("idle"); setTrends([]); setPosts([]); setQueuedPosts(new Set()); clearSavedState(); }}>
+                <XCircle className="h-3.5 w-3.5" /> Clear Results
               </Button>
               <Button
                 size="sm"

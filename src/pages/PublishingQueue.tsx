@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Search, Send, Clock, CheckCircle2, XCircle, AlertTriangle,
-  Loader2, Calendar, RefreshCw, Eye, Trash2, RotateCcw,
+  Loader2, Calendar, RefreshCw, Eye, Trash2, RotateCcw, ImageIcon,
 } from "lucide-react";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import {
@@ -130,7 +130,28 @@ export default function PublishingQueue() {
     onError: () => toast.error("Failed to remove from queue"),
   });
 
-  // Filter items by tab
+  const [generatingMedia, setGeneratingMedia] = useState<Set<string>>(new Set());
+
+  const generateMediaMutation = useMutation({
+    mutationFn: async (queueId: string) => {
+      setGeneratingMedia((prev) => new Set(prev).add(queueId));
+      const { data, error } = await supabase.functions.invoke("generate-queue-media", {
+        body: { queueId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (_, queueId) => {
+      setGeneratingMedia((prev) => { const next = new Set(prev); next.delete(queueId); return next; });
+      toast.success("Media generated!");
+      queryClient.invalidateQueries({ queryKey: ["content-queue"] });
+    },
+    onError: (error, queueId) => {
+      setGeneratingMedia((prev) => { const next = new Set(prev); next.delete(queueId); return next; });
+      toast.error(error instanceof Error ? error.message : "Failed to generate media");
+    },
+  });
   const filteredByTab = (queueItems || []).filter((item: any) => {
     if (activeTab === "pending") return ["queued", "scheduled", "posting"].includes(item.posting_status);
     if (activeTab === "posted") return item.posting_status === "posted";
@@ -235,6 +256,13 @@ export default function PublishingQueue() {
                     </span>
                   </div>
 
+                  {/* Thumbnail */}
+                  {item.media_url && (
+                    <div className="shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-muted">
+                      <img src={item.media_url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+
                   {/* Caption preview */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm line-clamp-2">{item.formatted_caption}</p>
@@ -264,6 +292,21 @@ export default function PublishingQueue() {
                   <div className="flex items-center gap-1.5 shrink-0">
                     {item.posting_status === "queued" && (
                       <>
+                        {!item.media_url && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 text-xs"
+                            onClick={(e) => { e.stopPropagation(); generateMediaMutation.mutate(item.id); }}
+                            disabled={generatingMedia.has(item.id)}
+                          >
+                            {generatingMedia.has(item.id) ? (
+                              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating...</>
+                            ) : (
+                              <><ImageIcon className="h-3.5 w-3.5" /> Generate Media</>
+                            )}
+                          </Button>
+                        )}
                         {connected ? (
                           <Button
                             size="sm"
