@@ -56,6 +56,94 @@ export type Database = {
           },
         ]
       }
+      content_queue: {
+        Row: {
+          aspect_ratio: string | null
+          connection_id: string | null
+          content_id: string | null
+          created_at: string
+          error_message: string | null
+          external_post_id: string | null
+          formatted_caption: string
+          formatted_hashtags: string[] | null
+          id: string
+          media_type: string
+          media_url: string | null
+          platform: Database["public"]["Enums"]["platform_type"]
+          posted_at: string | null
+          posting_status: string
+          request_id: string
+          retry_count: number
+          scheduled_for: string | null
+          updated_at: string
+          video_hook_text: string | null
+        }
+        Insert: {
+          aspect_ratio?: string | null
+          connection_id?: string | null
+          content_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          external_post_id?: string | null
+          formatted_caption: string
+          formatted_hashtags?: string[] | null
+          id?: string
+          media_type?: string
+          media_url?: string | null
+          platform: Database["public"]["Enums"]["platform_type"]
+          posted_at?: string | null
+          posting_status?: string
+          request_id: string
+          retry_count?: number
+          scheduled_for?: string | null
+          updated_at?: string
+          video_hook_text?: string | null
+        }
+        Update: {
+          aspect_ratio?: string | null
+          connection_id?: string | null
+          content_id?: string | null
+          created_at?: string
+          error_message?: string | null
+          external_post_id?: string | null
+          formatted_caption?: string
+          formatted_hashtags?: string[] | null
+          id?: string
+          media_type?: string
+          media_url?: string | null
+          platform?: Database["public"]["Enums"]["platform_type"]
+          posted_at?: string | null
+          posting_status?: string
+          request_id?: string
+          retry_count?: number
+          scheduled_for?: string | null
+          updated_at?: string
+          video_hook_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_queue_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "social_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_queue_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "generated_content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_queue_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "content_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_requests: {
         Row: {
           additional_context: string | null
@@ -545,6 +633,48 @@ export type Database = {
         }
         Relationships: []
       }
+      social_connections: {
+        Row: {
+          access_token: string | null
+          account_name: string | null
+          connected_at: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          page_id: string | null
+          platform: Database["public"]["Enums"]["platform_type"]
+          refresh_token: string | null
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token?: string | null
+          account_name?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          page_id?: string | null
+          platform: Database["public"]["Enums"]["platform_type"]
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string | null
+          account_name?: string | null
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          page_id?: string | null
+          platform?: Database["public"]["Enums"]["platform_type"]
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -561,12 +691,15 @@ export type Database = {
         | "approved"
         | "posted"
         | "rejected"
+        | "scheduled"
+        | "queued"
       content_type:
         | "social_post"
         | "blog_article"
         | "ad_copy"
         | "caption"
         | "image"
+        | "video"
       customer_segment: "new_lead" | "high_value" | "warm" | "dormant"
       fit_level: "high_fit" | "medium_fit" | "low_fit"
       lead_source: "google" | "social_media" | "word_of_mouth" | "other"
@@ -591,6 +724,7 @@ export type Database = {
         | "facebook"
         | "website"
         | "other"
+        | "tiktok"
       preferred_contact: "email" | "phone" | "sms" | "any"
     }
     CompositeTypes: {
@@ -727,6 +861,8 @@ export const Constants = {
         "approved",
         "posted",
         "rejected",
+        "scheduled",
+        "queued",
       ],
       content_type: [
         "social_post",
@@ -734,6 +870,7 @@ export const Constants = {
         "ad_copy",
         "caption",
         "image",
+        "video",
       ],
       customer_segment: ["new_lead", "high_value", "warm", "dormant"],
       fit_level: ["high_fit", "medium_fit", "low_fit"],
@@ -761,6 +898,7 @@ export const Constants = {
         "facebook",
         "website",
         "other",
+        "tiktok",
       ],
       preferred_contact: ["email", "phone", "sms", "any"],
     },
