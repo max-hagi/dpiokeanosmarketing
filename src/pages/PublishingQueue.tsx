@@ -256,6 +256,13 @@ export default function PublishingQueue() {
                     </span>
                   </div>
 
+                  {/* Thumbnail */}
+                  {item.media_url && (
+                    <div className="shrink-0 w-14 h-14 rounded-lg overflow-hidden bg-muted">
+                      <img src={item.media_url} alt="" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+
                   {/* Caption preview */}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm line-clamp-2">{item.formatted_caption}</p>
