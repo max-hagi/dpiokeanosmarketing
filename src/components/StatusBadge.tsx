@@ -10,6 +10,8 @@ const statusConfig: Record<ContentStatus, { label: string; className: string }> 
   approved: { label: "Approved", className: "bg-success/10 text-success" },
   posted: { label: "Posted", className: "bg-accent/10 text-accent" },
   rejected: { label: "Rejected", className: "bg-destructive/10 text-destructive" },
+  scheduled: { label: "Scheduled", className: "bg-blue-500/10 text-blue-600" },
+  queued: { label: "Queued", className: "bg-muted text-muted-foreground" },
 };
 
 export default function StatusBadge({ status }: { status: ContentStatus }) {
