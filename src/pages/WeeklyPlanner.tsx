@@ -164,6 +164,7 @@ export default function WeeklyPlanner() {
         setPosts(data.posts);
         setStep("done");
         setTrendsOpen(false);
+        saveState(data.trends, data.posts, new Set());
       }, 800);
     },
     onError: (error) => {
