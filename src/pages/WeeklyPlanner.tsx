@@ -274,7 +274,7 @@ export default function WeeklyPlanner() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      setQueuedPosts((prev) => new Set(prev).add(index));
+      setQueuedPosts((prev) => { const next = new Set(prev).add(index); saveState(trends, posts, next); return next; });
       queryClient.invalidateQueries({ queryKey: ["content-queue"] });
       queryClient.invalidateQueries({ queryKey: ["all-requests"] });
       toast.success(`Post ${index + 1} queued for ${post.platform}!`);
