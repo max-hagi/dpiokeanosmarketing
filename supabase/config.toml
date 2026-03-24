@@ -14,3 +14,18 @@ verify_jwt = false
 
 [functions.weekly-planner]
 verify_jwt = false
+
+[functions.format-for-platform]
+verify_jwt = false
+
+[functions.publish-content]
+verify_jwt = false
+
+[functions.generate-video]
+verify_jwt = false
+
+[functions.crm-action-agent]
+verify_jwt = false
+
+[functions.follow-up-agent]
+verify_jwt = false
