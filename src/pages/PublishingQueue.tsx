@@ -285,6 +285,21 @@ export default function PublishingQueue() {
                   <div className="flex items-center gap-1.5 shrink-0">
                     {item.posting_status === "queued" && (
                       <>
+                        {!item.media_url && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1.5 text-xs"
+                            onClick={(e) => { e.stopPropagation(); generateMediaMutation.mutate(item.id); }}
+                            disabled={generatingMedia.has(item.id)}
+                          >
+                            {generatingMedia.has(item.id) ? (
+                              <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Generating...</>
+                            ) : (
+                              <><ImageIcon className="h-3.5 w-3.5" /> Generate Media</>
+                            )}
+                          </Button>
+                        )}
                         {connected ? (
                           <Button
                             size="sm"
