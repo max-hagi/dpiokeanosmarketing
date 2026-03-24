@@ -74,23 +74,46 @@ const contentTypeColors: Record<string, string> = {
   short_video: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
 };
 
+// Session storage helpers to persist results across tab switches
+const STORAGE_KEY = "weekly-planner-results";
+
+function loadSavedState() {
+  try {
+    const saved = sessionStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved) as { trends: Trend[]; posts: Post[]; queuedPosts: number[] };
+  } catch {}
+  return null;
+}
+
+function saveState(trends: Trend[], posts: Post[], queuedPosts: Set<number>) {
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ trends, posts, queuedPosts: Array.from(queuedPosts) }));
+  } catch {}
+}
+
+function clearSavedState() {
+  try { sessionStorage.removeItem(STORAGE_KEY); } catch {}
+}
+
 export default function WeeklyPlanner() {
   const navigate = useNavigate();
   const [, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+
+  const saved = loadSavedState();
 
   const [focusTheme, setFocusTheme] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["instagram", "tiktok", "facebook"]);
   const [selectedMix, setSelectedMix] = useState<string[]>(["educational", "behind_the_scenes", "trend_driven", "promotional", "social_proof"]);
   const [tone, setTone] = useState("default");
 
-  const [step, setStep] = useState<"idle" | "researching" | "generating" | "done">("idle");
-  const [trends, setTrends] = useState<Trend[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [trendsOpen, setTrendsOpen] = useState(true);
+  const [step, setStep] = useState<"idle" | "researching" | "generating" | "done">(saved?.posts?.length ? "done" : "idle");
+  const [trends, setTrends] = useState<Trend[]>(saved?.trends || []);
+  const [posts, setPosts] = useState<Post[]>(saved?.posts || []);
+  const [trendsOpen, setTrendsOpen] = useState(!saved?.posts?.length);
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editCaption, setEditCaption] = useState("");
-  const [queuedPosts, setQueuedPosts] = useState<Set<number>>(new Set());
+  const [queuedPosts, setQueuedPosts] = useState<Set<number>>(new Set(saved?.queuedPosts || []));
 
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
