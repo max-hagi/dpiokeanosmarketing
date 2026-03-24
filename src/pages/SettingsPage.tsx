@@ -9,7 +9,7 @@ import {
   Search, Download, Activity, Mail, Brain, Target,
   Users, AlertTriangle, CheckCircle, Settings, Sliders,
   MapPin, DollarSign, Clock, Wrench, UserCheck, Send,
-  FileText, ArrowRight, Pause, RotateCcw, XCircle
+  FileText, ArrowRight, Pause, RotateCcw, XCircle, Globe
 } from "lucide-react";
 import { format, isThisWeek, formatDistanceToNow } from "date-fns";
 import { useSearchParams } from "react-router-dom";
@@ -170,7 +170,33 @@ export default function SettingsPage() {
       return data;
     },
   });
+  
+  const { data: socialConnections } = useQuery({
+    queryKey: ["social-connections"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("social_connections")
+        .select("*")
+        .order("platform");
+      if (error) throw error;
+      return data;
+    },
+  });
 
+  const socialPlatforms = [
+    { platform: "instagram", label: "Instagram", desc: "Meta Graph API for posts, reels, stories" },
+    { platform: "facebook", label: "Facebook", desc: "Meta Graph API for page posts and videos" },
+    { platform: "tiktok", label: "TikTok", desc: "Content Posting API for video uploads" },
+    { platform: "linkedin", label: "LinkedIn", desc: "Share API for posts and articles" },
+    { platform: "x", label: "X / Twitter", desc: "API v2 for tweets and media" },
+  ];
+
+  const getConnectionStatus = (platform: string) => {
+    const conn = socialConnections?.find((c: any) => c.platform === platform);
+    if (conn?.is_active) return { status: "Connected", connected: true, since: conn.connected_at };
+    return { status: "Not Connected", connected: false, since: null };
+  };
+  
   // Build unified activity feed with humanized labels
   const activityFeed: Array<{ time: string; label: string; detail: string; icon: typeof Mail; color: string }> = [];
 
@@ -352,7 +378,7 @@ export default function SettingsPage() {
       {activeTab === "config" && (
         <div className="space-y-6">
           <div className="glass-card rounded-2xl p-6 space-y-4">
-            <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider">Connection Status</h2>
+            <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider">Service Connections</h2>
             <div className="space-y-3">
               {[
                 { label: "Email API (Outlook/Gmail)", status: "Not Connected", connected: false },
@@ -365,6 +391,37 @@ export default function SettingsPage() {
                 </div>
               ))}
             </div>
+          </div>
+
+          <div className="glass-card rounded-2xl p-6 space-y-4">
+            <h2 className="font-heading text-sm font-semibold text-muted-foreground uppercase tracking-wider">Social Media Connections</h2>
+            <p className="text-xs text-muted-foreground">Connect your social accounts to publish content directly from the Publishing Queue. API credentials are stored securely.</p>
+            <div className="space-y-3">
+              {socialPlatforms.map(sp => {
+                const cs = getConnectionStatus(sp.platform);
+                return (
+                  <div key={sp.platform} className="flex items-center justify-between rounded-lg border border-border p-3">
+                    <div>
+                      <span className="text-sm font-medium">{sp.label}</span>
+                      <p className="text-xs text-muted-foreground">{sp.desc}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {cs.connected && cs.since && (
+                        <span className="text-[10px] text-muted-foreground">
+                          since {format(new Date(cs.since), "MMM d")}
+                        </span>
+                      )}
+                      <span className={`text-xs font-bold ${cs.connected ? "text-green-600" : "text-muted-foreground"}`}>
+                        {cs.status}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-xs text-muted-foreground pt-2 border-t border-border">
+              Social API integrations require paid API access from each platform. Once you have API credentials, you can configure them here to enable direct posting.
+            </p>
           </div>
 
           <div className="glass-card rounded-2xl p-6 space-y-4">
