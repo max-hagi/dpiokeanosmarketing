@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   Search, Send, Clock, CheckCircle2, XCircle, AlertTriangle,
-  Loader2, Calendar, RefreshCw, Eye, Trash2, RotateCcw,
+  Loader2, Calendar, RefreshCw, Eye, Trash2, RotateCcw, ImageIcon,
 } from "lucide-react";
 import { format, formatDistanceToNow, isPast } from "date-fns";
 import {
