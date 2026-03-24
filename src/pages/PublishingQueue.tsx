@@ -130,7 +130,28 @@ export default function PublishingQueue() {
     onError: () => toast.error("Failed to remove from queue"),
   });
 
-  // Filter items by tab
+  const [generatingMedia, setGeneratingMedia] = useState<Set<string>>(new Set());
+
+  const generateMediaMutation = useMutation({
+    mutationFn: async (queueId: string) => {
+      setGeneratingMedia((prev) => new Set(prev).add(queueId));
+      const { data, error } = await supabase.functions.invoke("generate-queue-media", {
+        body: { queueId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (_, queueId) => {
+      setGeneratingMedia((prev) => { const next = new Set(prev); next.delete(queueId); return next; });
+      toast.success("Media generated!");
+      queryClient.invalidateQueries({ queryKey: ["content-queue"] });
+    },
+    onError: (error, queueId) => {
+      setGeneratingMedia((prev) => { const next = new Set(prev); next.delete(queueId); return next; });
+      toast.error(error instanceof Error ? error.message : "Failed to generate media");
+    },
+  });
   const filteredByTab = (queueItems || []).filter((item: any) => {
     if (activeTab === "pending") return ["queued", "scheduled", "posting"].includes(item.posting_status);
     if (activeTab === "posted") return item.posting_status === "posted";
