@@ -459,12 +459,15 @@ export default function WeeklyPlanner() {
             <p className="text-sm text-muted-foreground">
               Week of {weekLabel} · {posts.length} posts · Platforms: {[...new Set(posts.map((p) => p.platform))].join(", ")} · Based on {trends.length} trends
             </p>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
               <Button variant="outline" size="sm" className="gap-1.5" onClick={() => generateMutation.mutate()}>
                 <RefreshCw className="h-3.5 w-3.5" /> Regenerate
               </Button>
               <Button variant="outline" size="sm" className="gap-1.5" onClick={copyAllCaptions}>
                 <Clipboard className="h-3.5 w-3.5" /> Copy All
+              </Button>
+              <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={() => { setStep("idle"); setTrends([]); setPosts([]); setQueuedPosts(new Set()); clearSavedState(); }}>
+                <XCircle className="h-3.5 w-3.5" /> Clear Results
               </Button>
               <Button
                 size="sm"
